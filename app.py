@@ -27,6 +27,87 @@ from src.ai_analyst import analyze_stock_stream
 
 WATCHLIST_FILE = "watchlist.json"
 
+# セクター日本語マッピング
+SECTOR_JA = {
+    "Consumer Cyclical": "一般消費財・サービス",
+    "Technology": "情報技術",
+    "Industrials": "資本財・サービス",
+    "Financial Services": "金融サービス",
+    "Healthcare": "ヘルスケア",
+    "Basic Materials": "素材",
+    "Energy": "エネルギー",
+    "Communication Services": "コミュニケーション・サービス",
+    "Real Estate": "不動産",
+    "Consumer Defensive": "生活必需品",
+    "Utilities": "公益事業",
+}
+
+INDUSTRY_JA = {
+    "Auto Manufacturers": "自動車メーカー",
+    "Semiconductors": "半導体",
+    "Consumer Electronics": "家電",
+    "Banks - Regional": "地方銀行",
+    "Banks - Diversified": "総合銀行",
+    "Internet Retail": "ネット小売",
+    "Software - Infrastructure": "インフラソフトウェア",
+    "Software - Application": "アプリケーションソフトウェア",
+    "Specialty Retail": "専門小売",
+    "Electronic Components": "電子部品",
+    "Insurance - Diversified": "総合保険",
+    "Oil & Gas Integrated": "石油・ガス統合",
+    "Drug Manufacturers - General": "医薬品メーカー",
+    "Telecom Services": "通信サービス",
+}
+
+
+def _has_japanese(text: str) -> bool:
+    return any('぀' <= c <= 'ヿ' or '一' <= c <= '鿿' for c in text)
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _translate_name_to_ja(name: str) -> str:
+    try:
+        from deep_translator import GoogleTranslator
+        return GoogleTranslator(source="en", target="ja").translate(name)
+    except Exception:
+        return name
+
+
+def get_display_name(info: dict, lang: str, is_japan: bool = False) -> str:
+    long_ = info.get("longName") or info.get("shortName") or ""
+    if lang == "日本語":
+        short = info.get("shortName", "")
+        if _has_japanese(short):
+            return short
+        if _has_japanese(long_):
+            return long_
+        # 日本株は社名を翻訳して取得
+        if is_japan and long_:
+            return _translate_name_to_ja(long_)
+    return long_
+
+
+def get_sector_display(info: dict, lang: str) -> str:
+    sector = info.get("sector", "")
+    industry = info.get("industry", "")
+    if lang == "日本語":
+        sector = SECTOR_JA.get(sector, sector)
+        industry = INDUSTRY_JA.get(industry, industry)
+    return sector, industry
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def translate_to_ja(text: str) -> str:
+    try:
+        from deep_translator import GoogleTranslator
+        # 5000文字の制限があるので分割
+        if len(text) <= 4999:
+            return GoogleTranslator(source="en", target="ja").translate(text)
+        parts = [text[i:i+4999] for i in range(0, len(text), 4999)]
+        return "".join(GoogleTranslator(source="en", target="ja").translate(p) for p in parts)
+    except Exception:
+        return text
+
 
 def load_watchlist() -> list:
     if os.path.exists(WATCHLIST_FILE):
@@ -76,41 +157,52 @@ def _fmt_cap(val, currency: str) -> str:
         return f"${val/1e6:.0f}M"
 
 
-def display_financials(info: dict, currency: str) -> None:
-    st.markdown("#### バリュエーション")
-    v1, v2, v3, v4, v5 = st.columns(5)
-    v1.metric("PER（実績）", _fmt_fin(info.get("trailingPE"), ".1f", "倍"))
-    v2.metric("PER（予想）", _fmt_fin(info.get("forwardPE"), ".1f", "倍"))
-    v3.metric("PBR", _fmt_fin(info.get("priceToBook"), ".2f", "倍"))
-    v4.metric("EPS", _fmt_fin(info.get("trailingEps"), ".2f"))
-    v5.metric("時価総額", _fmt_cap(info.get("marketCap"), currency))
+def display_financials(info: dict, currency: str, lang: str = "日本語") -> None:
+    ja = lang == "日本語"
+    mult = "倍" if ja else "x"
 
-    st.markdown("#### 収益性")
+    sector, industry = get_sector_display(info, lang)
+    if sector or industry:
+        label = "セクター / 業種" if ja else "Sector / Industry"
+        st.caption(f"{label}: **{sector}** / {industry}")
+
+    st.markdown("#### バリュエーション" if ja else "#### Valuation")
+    v1, v2, v3, v4, v5 = st.columns(5)
+    v1.metric("PER（実績）" if ja else "P/E (TTM)", _fmt_fin(info.get("trailingPE"), ".1f", mult))
+    v2.metric("PER（予想）" if ja else "P/E (Fwd)", _fmt_fin(info.get("forwardPE"), ".1f", mult))
+    v3.metric("PBR" if ja else "P/B", _fmt_fin(info.get("priceToBook"), ".2f", mult))
+    v4.metric("EPS", _fmt_fin(info.get("trailingEps"), ".2f"))
+    v5.metric("時価総額" if ja else "Market Cap", _fmt_cap(info.get("marketCap"), currency))
+
+    st.markdown("#### 収益性" if ja else "#### Profitability")
     p1, p2, p3, p4, p5 = st.columns(5)
     p1.metric("ROE", _fmt_pct(info.get("returnOnEquity")))
     p2.metric("ROA", _fmt_pct(info.get("returnOnAssets")))
-    p3.metric("純利益率", _fmt_pct(info.get("profitMargins")))
-    p4.metric("営業利益率", _fmt_pct(info.get("operatingMargins")))
-    p5.metric("粗利益率", _fmt_pct(info.get("grossMargins")))
+    p3.metric("純利益率" if ja else "Net Margin", _fmt_pct(info.get("profitMargins")))
+    p4.metric("営業利益率" if ja else "Operating Margin", _fmt_pct(info.get("operatingMargins")))
+    p5.metric("粗利益率" if ja else "Gross Margin", _fmt_pct(info.get("grossMargins")))
 
-    st.markdown("#### 成長性・財務健全性")
+    st.markdown("#### 成長性・財務健全性" if ja else "#### Growth & Financial Health")
     g1, g2, g3, g4, g5 = st.columns(5)
-    g1.metric("売上成長率", _fmt_pct(info.get("revenueGrowth")))
-    g2.metric("利益成長率", _fmt_pct(info.get("earningsGrowth")))
-    g3.metric("流動比率", _fmt_fin(info.get("currentRatio"), ".2f"))
-    g4.metric("D/Eレシオ", _fmt_fin(info.get("debtToEquity"), ".2f"))
+    g1.metric("売上成長率" if ja else "Revenue Growth", _fmt_pct(info.get("revenueGrowth")))
+    g2.metric("利益成長率" if ja else "Earnings Growth", _fmt_pct(info.get("earningsGrowth")))
+    g3.metric("流動比率" if ja else "Current Ratio", _fmt_fin(info.get("currentRatio"), ".2f"))
+    g4.metric("D/Eレシオ" if ja else "D/E Ratio", _fmt_fin(info.get("debtToEquity"), ".2f"))
     div = info.get("dividendYield")
     if div is not None:
-        # yfinance は日本株をすでに % 表記、米国株は小数で返すことがある
         div_str = f"{div:.2f}%" if div > 0.5 else f"{div*100:.2f}%"
     else:
         div_str = "N/A"
-    g5.metric("配当利回り", div_str)
+    g5.metric("配当利回り" if ja else "Dividend Yield", div_str)
 
     # 会社概要
     summary = info.get("longBusinessSummary") or info.get("description")
     if summary:
-        with st.expander("会社概要"):
+        label = "会社概要" if ja else "Business Summary"
+        with st.expander(label):
+            if ja and not _has_japanese(summary):
+                with st.spinner("翻訳中..."):
+                    summary = translate_to_ja(summary)
             st.write(summary)
 
 
@@ -163,6 +255,8 @@ with st.sidebar:
 
     selected_model = st.selectbox("AIモデル", model_names)
 
+    lang = st.radio("表示言語", ["日本語", "English"], horizontal=True)
+
     period = st.selectbox(
         "分析期間",
         ["3mo", "6mo", "1y", "2y", "5y"],
@@ -210,7 +304,7 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
         signals = get_signals(df)
         stats = get_summary_stats(df, info)
 
-        name = info.get("longName") or info.get("shortName") or ticker
+        name = get_display_name(info, lang, is_japan)
         currency = info.get("currency", "JPY" if is_japan else "USD")
         current = df["close"].iloc[-1]
         prev = df["close"].iloc[-2] if len(df) > 1 else current
@@ -309,7 +403,7 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
 
         with tab3:
             if info:
-                display_financials(info, currency)
+                display_financials(info, currency, lang)
             else:
                 st.warning("財務データを取得できませんでした")
 
