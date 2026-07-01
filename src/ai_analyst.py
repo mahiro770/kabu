@@ -3,6 +3,14 @@ import ollama
 from typing import Generator
 
 
+def list_ollama_models() -> list[str]:
+    try:
+        names = [m.model for m in ollama.list().models]
+        return names or ["gemma4:12b"]
+    except Exception:
+        return ["gemma4:12b"]
+
+
 def _fmt(v, decimals: int = 2) -> str:
     if v is None or (isinstance(v, float) and pd.isna(v)):
         return "N/A"

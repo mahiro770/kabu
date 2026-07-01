@@ -1,6 +1,4 @@
 import streamlit as st
-import json
-import os
 
 st.set_page_config(
     page_title="株式AI分析",
@@ -23,9 +21,8 @@ st.markdown("""
 from src.data_fetcher import get_stock_data, get_stock_info
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
 from src.chart_builder import build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart
-from src.ai_analyst import analyze_stock_stream
-
-WATCHLIST_FILE = "watchlist.json"
+from src.ai_analyst import analyze_stock_stream, list_ollama_models
+from src.watchlist import load_watchlist, save_watchlist
 
 # セクター日本語マッピング
 SECTOR_JA = {
@@ -107,18 +104,6 @@ def translate_to_ja(text: str) -> str:
         return "".join(GoogleTranslator(source="en", target="ja").translate(p) for p in parts)
     except Exception:
         return text
-
-
-def load_watchlist() -> list:
-    if os.path.exists(WATCHLIST_FILE):
-        with open(WATCHLIST_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
-
-
-def save_watchlist(watchlist: list) -> None:
-    with open(WATCHLIST_FILE, "w", encoding="utf-8") as f:
-        json.dump(watchlist, f, ensure_ascii=False, indent=2)
 
 
 def signal_badge(sig: str) -> str:
@@ -244,16 +229,7 @@ with st.sidebar:
     st.divider()
     st.markdown("## ⚙️ 設定")
 
-    try:
-        import ollama as _ol
-        raw_models = _ol.list()
-        model_names = [m.model for m in raw_models.models]
-        if not model_names:
-            model_names = ["gemma4:12b"]
-    except Exception:
-        model_names = ["gemma4:12b"]
-
-    selected_model = st.selectbox("AIモデル", model_names)
+    selected_model = st.selectbox("AIモデル", list_ollama_models())
 
     lang = st.radio("表示言語", ["日本語", "English"], horizontal=True)
 
