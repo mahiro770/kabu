@@ -1,9 +1,13 @@
 import pandas as pd
 import numpy as np
 
+DIRECTIONAL_SIGNAL_KEYS = [
+    "ma_cross", "rsi", "macd", "bb", "ichimoku", "adx", "obv", "vwap",
+]
+
 
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    close = df["close"]
+    high, low, close, volume = df["high"], df["low"], df["close"], df["volume"]
 
     df["ma20"] = close.rolling(20).mean()
     df["ma50"] = close.rolling(50).mean()
@@ -22,6 +26,12 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["macd_signal"] = df["macd"].ewm(span=9, adjust=False).mean()
     df["macd_hist"] = df["macd"] - df["macd_signal"]
 
+    _add_ichimoku(df, high, low, close)
+    _add_adx(df, high, low, close)
+    df["obv"] = _calc_obv(close, volume)
+    df["obv_ema"] = df["obv"].ewm(span=20, adjust=False).mean()
+    df["vwap"] = _calc_vwap(high, low, close, volume)
+
     return df
 
 
@@ -33,6 +43,57 @@ def _calc_rsi(series: pd.Series, period: int = 14) -> pd.Series:
     avg_loss = loss.ewm(com=period - 1, min_periods=period).mean()
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
+
+
+def _add_ichimoku(df: pd.DataFrame, high: pd.Series, low: pd.Series, close: pd.Series) -> None:
+    tenkan = (high.rolling(9).max() + low.rolling(9).min()) / 2
+    kijun = (high.rolling(26).max() + low.rolling(26).min()) / 2
+    senkou_a_raw = (tenkan + kijun) / 2
+    senkou_b_raw = (high.rolling(52).max() + low.rolling(52).min()) / 2
+
+    df["ichimoku_tenkan"] = tenkan
+    df["ichimoku_kijun"] = kijun
+    # 先行スパンは26日先に投影されるのが本来の表示だが、シグナル判定用に
+    # 「今日時点で有効な雲」を得るため過去方向にシフトして保持する
+    df["ichimoku_senkou_a"] = senkou_a_raw.shift(26)
+    df["ichimoku_senkou_b"] = senkou_b_raw.shift(26)
+    df["ichimoku_senkou_a_raw"] = senkou_a_raw
+    df["ichimoku_senkou_b_raw"] = senkou_b_raw
+    df["ichimoku_chikou"] = close.shift(-26)
+
+
+def _add_adx(df: pd.DataFrame, high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> None:
+    prev_close = close.shift(1)
+    tr = pd.concat([
+        high - low,
+        (high - prev_close).abs(),
+        (low - prev_close).abs(),
+    ], axis=1).max(axis=1)
+
+    up_move = high.diff()
+    down_move = -low.diff()
+    plus_dm = pd.Series(np.where((up_move > down_move) & (up_move > 0), up_move, 0.0), index=df.index)
+    minus_dm = pd.Series(np.where((down_move > up_move) & (down_move > 0), down_move, 0.0), index=df.index)
+
+    atr = tr.ewm(alpha=1 / period, adjust=False).mean()
+    plus_di = 100 * plus_dm.ewm(alpha=1 / period, adjust=False).mean() / atr
+    minus_di = 100 * minus_dm.ewm(alpha=1 / period, adjust=False).mean() / atr
+    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+
+    df["plus_di"] = plus_di
+    df["minus_di"] = minus_di
+    df["adx"] = dx.ewm(alpha=1 / period, adjust=False).mean()
+
+
+def _calc_obv(close: pd.Series, volume: pd.Series) -> pd.Series:
+    direction = np.sign(close.diff()).fillna(0)
+    return (direction * volume).cumsum()
+
+
+def _calc_vwap(high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series, period: int = 20) -> pd.Series:
+    typical_price = (high + low + close) / 3
+    pv = typical_price * volume
+    return pv.rolling(period).sum() / volume.rolling(period).sum()
 
 
 def get_signals(df: pd.DataFrame) -> dict:
@@ -79,12 +140,53 @@ def get_signals(df: pd.DataFrame) -> dict:
     else:
         signals["bb"] = "中立"
 
-    buy = sum(1 for s in signals.values() if s == "買い")
-    sell = sum(1 for s in signals.values() if s == "売り")
+    senkou_a = last.get("ichimoku_senkou_a")
+    senkou_b = last.get("ichimoku_senkou_b")
+    if senkou_a is not None and senkou_b is not None and not pd.isna(senkou_a) and not pd.isna(senkou_b):
+        cloud_top = max(senkou_a, senkou_b)
+        cloud_bottom = min(senkou_a, senkou_b)
+        if close > cloud_top:
+            signals["ichimoku"] = "買い"
+        elif close < cloud_bottom:
+            signals["ichimoku"] = "売り"
+        else:
+            signals["ichimoku"] = "中立"
+    else:
+        signals["ichimoku"] = "中立"
 
-    if buy >= 3:
+    adx = last.get("adx")
+    plus_di = last.get("plus_di")
+    minus_di = last.get("minus_di")
+    if adx is not None and not pd.isna(adx) and not pd.isna(plus_di) and not pd.isna(minus_di):
+        if adx >= 25 and plus_di > minus_di:
+            signals["adx"] = "買い"
+        elif adx >= 25 and minus_di > plus_di:
+            signals["adx"] = "売り"
+        else:
+            signals["adx"] = "中立"
+    else:
+        signals["adx"] = "中立"
+
+    obv = last.get("obv")
+    obv_ema = last.get("obv_ema")
+    if obv is not None and obv_ema is not None and not pd.isna(obv) and not pd.isna(obv_ema):
+        signals["obv"] = "買い" if obv > obv_ema else "売り" if obv < obv_ema else "中立"
+    else:
+        signals["obv"] = "中立"
+
+    vwap = last.get("vwap")
+    if vwap is not None and not pd.isna(vwap):
+        signals["vwap"] = "買い" if close > vwap else "売り" if close < vwap else "中立"
+    else:
+        signals["vwap"] = "中立"
+
+    buy = sum(1 for k in DIRECTIONAL_SIGNAL_KEYS if signals[k] == "買い")
+    sell = sum(1 for k in DIRECTIONAL_SIGNAL_KEYS if signals[k] == "売り")
+    total = len(DIRECTIONAL_SIGNAL_KEYS)
+
+    if buy / total >= 0.75:
         signals["overall"] = "買い"
-    elif sell >= 3:
+    elif sell / total >= 0.75:
         signals["overall"] = "売り"
     elif buy > sell:
         signals["overall"] = "やや買い"

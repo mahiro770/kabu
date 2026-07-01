@@ -3,12 +3,14 @@ import streamlit as st
 from src.ai_analyst import list_ollama_models
 from src.news_fetcher import fetch_nikkei_headlines, fetch_yahoo_business_news
 from src.stock_screener import screen_stocks_stream_with_timeout
+from src.ui import inject_theme
 
 st.set_page_config(
     page_title="注目銘柄スクリーニング",
     page_icon="📰",
     layout="wide",
 )
+inject_theme()
 
 st.markdown("# 📰 注目銘柄スクリーニング")
 st.caption("経済ニュースの見出しをAIが分析し、翌営業日以降に注目すべき銘柄を抽出します")

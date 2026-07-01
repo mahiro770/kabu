@@ -4,6 +4,45 @@ import pandas as pd
 import numpy as np
 
 
+def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame) -> None:
+    fig.add_trace(
+        go.Scatter(x=df.index, y=df["ichimoku_tenkan"], name="転換線",
+                   line=dict(color="#ef5350", width=1)),
+        row=1, col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=df.index, y=df["ichimoku_kijun"], name="基準線",
+                   line=dict(color="#1f77b4", width=1)),
+        row=1, col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=df.index, y=df["ichimoku_chikou"], name="遅行スパン",
+                   line=dict(color="#9b59b6", width=1, dash="dot")),
+        row=1, col=1,
+    )
+
+    # 先行スパンA/Bは26日先に投影して雲として表示する（未来分は日付を延長）
+    future_dates = pd.bdate_range(start=df.index[-1] + pd.Timedelta(days=1), periods=26)
+    cloud_index = df.index.append(future_dates)
+
+    senkou_a = pd.concat([df["ichimoku_senkou_a"], df["ichimoku_senkou_a_raw"].iloc[-26:].set_axis(future_dates)])
+    senkou_b = pd.concat([df["ichimoku_senkou_b"], df["ichimoku_senkou_b_raw"].iloc[-26:].set_axis(future_dates)])
+    senkou_a = senkou_a.reindex(cloud_index)
+    senkou_b = senkou_b.reindex(cloud_index)
+
+    fig.add_trace(
+        go.Scatter(x=cloud_index, y=senkou_b, name="先行スパンB",
+                   line=dict(color="rgba(239,83,80,0.4)", width=1)),
+        row=1, col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=cloud_index, y=senkou_a, name="先行スパンA（雲）",
+                   line=dict(color="rgba(38,166,154,0.4)", width=1),
+                   fill="tonexty", fillcolor="rgba(120,140,160,0.15)"),
+        row=1, col=1,
+    )
+
+
 def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure:
     fig = make_subplots(
         rows=2, cols=1,
@@ -52,6 +91,16 @@ def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure
                        fill="tonexty", fillcolor="rgba(150,150,150,0.08)"),
             row=1, col=1,
         )
+
+    if "VWAP" in show_ma:
+        fig.add_trace(
+            go.Scatter(x=df.index, y=df["vwap"], name="VWAP(20)",
+                       line=dict(color="#e91e8c", width=1.5, dash="dot")),
+            row=1, col=1,
+        )
+
+    if "一目雲" in show_ma:
+        _add_ichimoku_traces(fig, df)
 
     vol_colors = [
         "#26a69a" if c >= o else "#ef5350"
@@ -134,6 +183,57 @@ def build_macd_chart(df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         title="MACD",
+        height=220,
+        template="plotly_dark",
+        margin=dict(t=40, b=20),
+        legend=dict(orientation="h"),
+    )
+    return fig
+
+
+def build_adx_chart(df: pd.DataFrame) -> go.Figure:
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df["adx"], name="ADX",
+        line=dict(color="#f3f4f6", width=2),
+    ))
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df["plus_di"], name="+DI",
+        line=dict(color="#26a69a", width=1.5),
+    ))
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df["minus_di"], name="-DI",
+        line=dict(color="#ef5350", width=1.5),
+    ))
+
+    fig.add_hline(y=25, line_dash="dash", line_color="rgba(150,150,150,0.5)",
+                  annotation_text="トレンドあり 25", annotation_position="right")
+
+    fig.update_layout(
+        title="ADX（トレンド強度）/ +DI・-DI",
+        height=220,
+        template="plotly_dark",
+        margin=dict(t=40, b=20),
+        legend=dict(orientation="h"),
+    )
+    return fig
+
+
+def build_obv_chart(df: pd.DataFrame) -> go.Figure:
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df["obv"], name="OBV",
+        line=dict(color="#8b5cf6", width=1.5),
+    ))
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df["obv_ema"], name="OBV EMA20",
+        line=dict(color="#22d3ee", width=1.5, dash="dot"),
+    ))
+
+    fig.update_layout(
+        title="OBV（出来高バランス）",
         height=220,
         template="plotly_dark",
         margin=dict(t=40, b=20),

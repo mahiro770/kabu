@@ -72,12 +72,20 @@ def _build_prompt(df: pd.DataFrame, info: dict, signals: dict, stats: dict) -> s
 - RSI(14): {_fmt(last.get('rsi'))}
 - MACD: {_fmt(last.get('macd'))} / シグナル: {_fmt(last.get('macd_signal'))} / ヒスト: {_fmt(last.get('macd_hist'))}
 - ボリンジャーバンド上限: {_fmt(last.get('bb_upper'), 0)} / 下限: {_fmt(last.get('bb_lower'), 0)} {currency}
+- 一目均衡表 転換線: {_fmt(last.get('ichimoku_tenkan'), 0)} / 基準線: {_fmt(last.get('ichimoku_kijun'), 0)} / 先行スパンA: {_fmt(last.get('ichimoku_senkou_a'), 0)} / 先行スパンB: {_fmt(last.get('ichimoku_senkou_b'), 0)}
+- ADX: {_fmt(last.get('adx'), 1)}（+DI: {_fmt(last.get('plus_di'), 1)} / -DI: {_fmt(last.get('minus_di'), 1)}）
+- OBV: {_fmt(last.get('obv'), 0)} / OBV EMA20: {_fmt(last.get('obv_ema'), 0)}
+- VWAP(20日): {_fmt(last.get('vwap'), 0)} {currency}
 
 ## シグナル判定
 - MAクロス: {signals.get('ma_cross', 'N/A')}
 - RSI: {signals.get('rsi', 'N/A')}
 - MACD: {signals.get('macd', 'N/A')}
 - ボリンジャーバンド: {signals.get('bb', 'N/A')}
+- 一目均衡表（雲との位置関係）: {signals.get('ichimoku', 'N/A')}
+- ADX（トレンド強度・方向）: {signals.get('adx', 'N/A')}
+- OBV（出来高の裏付け）: {signals.get('obv', 'N/A')}
+- VWAP（20日出来高加重平均価格との乖離）: {signals.get('vwap', 'N/A')}
 - **総合シグナル: {signals.get('overall', 'N/A')}**
 
 ## 出来高

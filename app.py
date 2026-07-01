@@ -7,22 +7,17 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.markdown("""
-<style>
-    .block-container { padding-top: 1.5rem; }
-    div[data-testid="metric-container"] { background: #1e2130; border-radius: 8px; padding: 0.5rem 1rem; }
-    .signal-buy { color: #26a69a; font-weight: bold; font-size: 1.1rem; }
-    .signal-sell { color: #ef5350; font-weight: bold; font-size: 1.1rem; }
-    .signal-neutral { color: #ffa726; font-weight: bold; font-size: 1.1rem; }
-    .fin-label { font-size: 0.8rem; color: #aaa; }
-</style>
-""", unsafe_allow_html=True)
-
-from src.data_fetcher import get_stock_data, get_stock_info
+from src.data_fetcher import get_stock_data, get_stock_info, get_financial_history
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
-from src.chart_builder import build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart
+from src.chart_builder import (
+    build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart,
+    build_adx_chart, build_obv_chart,
+)
 from src.ai_analyst import analyze_stock_stream, list_ollama_models
 from src.watchlist import load_watchlist, save_watchlist
+from src.ui import inject_theme
+
+inject_theme()
 
 # セクター日本語マッピング
 SECTOR_JA = {
@@ -142,7 +137,7 @@ def _fmt_cap(val, currency: str) -> str:
         return f"${val/1e6:.0f}M"
 
 
-def display_financials(info: dict, currency: str, lang: str = "日本語") -> None:
+def display_financials(info: dict, currency: str, lang: str = "日本語", fin_history=None) -> None:
     ja = lang == "日本語"
     mult = "倍" if ja else "x"
 
@@ -168,7 +163,7 @@ def display_financials(info: dict, currency: str, lang: str = "日本語") -> No
     p5.metric("粗利益率" if ja else "Gross Margin", _fmt_pct(info.get("grossMargins")))
 
     st.markdown("#### 成長性・財務健全性" if ja else "#### Growth & Financial Health")
-    g1, g2, g3, g4, g5 = st.columns(5)
+    g1, g2, g3, g4, g5, g6 = st.columns(6)
     g1.metric("売上成長率" if ja else "Revenue Growth", _fmt_pct(info.get("revenueGrowth")))
     g2.metric("利益成長率" if ja else "Earnings Growth", _fmt_pct(info.get("earningsGrowth")))
     g3.metric("流動比率" if ja else "Current Ratio", _fmt_fin(info.get("currentRatio"), ".2f"))
@@ -179,6 +174,25 @@ def display_financials(info: dict, currency: str, lang: str = "日本語") -> No
     else:
         div_str = "N/A"
     g5.metric("配当利回り" if ja else "Dividend Yield", div_str)
+    latest_equity_ratio = (
+        fin_history.iloc[0]["equity_ratio"]
+        if fin_history is not None and not fin_history.empty else None
+    )
+    g6.metric("自己資本比率" if ja else "Equity Ratio", _fmt_pct(latest_equity_ratio))
+
+    if fin_history is not None and not fin_history.empty:
+        st.markdown("#### 過去の業績推移" if ja else "#### Historical Performance")
+        header = "| 年度 | 売上高 | 営業利益 | 純利益 | 自己資本比率 |" if ja \
+            else "| Fiscal Year | Revenue | Operating Income | Net Income | Equity Ratio |"
+        rows = [header, "|------|------|------|------|------|"]
+        for _, row in fin_history.iterrows():
+            year_label = f"{row['year'].year}年{row['year'].month}月期" if ja else row["year"].strftime("%Y-%m")
+            rows.append(
+                f"| {year_label} | {_fmt_cap(row['revenue'], currency)} | "
+                f"{_fmt_cap(row['operating_income'], currency)} | {_fmt_cap(row['net_income'], currency)} | "
+                f"{_fmt_pct(row['equity_ratio'])} |"
+            )
+        st.markdown("\n".join(rows))
 
     # 会社概要
     summary = info.get("longBusinessSummary") or info.get("description")
@@ -308,8 +322,8 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
 
         with tab1:
             show_ma = st.multiselect(
-                "表示する移動平均線",
-                ["MA20", "MA50", "MA200", "BB"],
+                "表示するオーバーレイ",
+                ["MA20", "MA50", "MA200", "BB", "一目雲", "VWAP"],
                 default=["MA20", "MA50"],
             )
             fig_price = build_price_chart(df, ticker, show_ma)
@@ -317,11 +331,16 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
 
             st.markdown("#### テクニカルシグナル")
             sc1, sc2, sc3, sc4 = st.columns(4)
+            sc5, sc6, sc7, sc8 = st.columns(4)
             for col, label, key in [
                 (sc1, "MAクロス", "ma_cross"),
                 (sc2, "RSI", "rsi"),
                 (sc3, "MACD", "macd"),
                 (sc4, "ボリンジャー", "bb"),
+                (sc5, "一目均衡表", "ichimoku"),
+                (sc6, "ADX", "adx"),
+                (sc7, "OBV", "obv"),
+                (sc8, "VWAP", "vwap"),
             ]:
                 sig = signals.get(key, "中立")
                 col.markdown(f"**{label}**")
@@ -361,6 +380,8 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
         with tab2:
             st.plotly_chart(build_rsi_chart(df), width="stretch")
             st.plotly_chart(build_macd_chart(df), width="stretch")
+            st.plotly_chart(build_adx_chart(df), width="stretch")
+            st.plotly_chart(build_obv_chart(df), width="stretch")
 
             with st.expander("最新テクニカル値"):
                 last = df.iloc[-1]
@@ -375,11 +396,22 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
 | MACDシグナル | {last.get('macd_signal', float('nan')):.4f} |
 | BB上限 | {last.get('bb_upper', float('nan')):.2f} |
 | BB下限 | {last.get('bb_lower', float('nan')):.2f} |
+| 一目 転換線 | {last.get('ichimoku_tenkan', float('nan')):.2f} |
+| 一目 基準線 | {last.get('ichimoku_kijun', float('nan')):.2f} |
+| 一目 先行スパンA | {last.get('ichimoku_senkou_a', float('nan')):.2f} |
+| 一目 先行スパンB | {last.get('ichimoku_senkou_b', float('nan')):.2f} |
+| ADX | {last.get('adx', float('nan')):.1f} |
+| +DI | {last.get('plus_di', float('nan')):.1f} |
+| -DI | {last.get('minus_di', float('nan')):.1f} |
+| OBV | {last.get('obv', float('nan')):,.0f} |
+| VWAP(20) | {last.get('vwap', float('nan')):.2f} |
 """)
 
         with tab3:
             if info:
-                display_financials(info, currency, lang)
+                with st.spinner("過去の業績データを取得中..."):
+                    fin_history = get_financial_history(ticker)
+                display_financials(info, currency, lang, fin_history)
             else:
                 st.warning("財務データを取得できませんでした")
 
