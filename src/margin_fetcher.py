@@ -4,10 +4,10 @@ from bs4 import BeautifulSoup
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
-def get_margin_trading(ticker: str) -> dict | None:
-    """信用取引残高（買い残・売り残・倍率、直近週次）を株探から取得する（日本株のみ）。"""
+def get_margin_trading_history(ticker: str, weeks: int = 5) -> list[dict]:
+    """信用取引残高（買い残・売り残・倍率、週次）を直近weeks件、株探から取得する（日本株のみ）。"""
     if not ticker.endswith(".T"):
-        return None
+        return []
     code = ticker[:-2]
     try:
         resp = requests.get(f"https://kabutan.jp/stock/?code={code}", headers=HEADERS, timeout=10)
@@ -16,14 +16,8 @@ def get_margin_trading(ticker: str) -> dict | None:
 
         header = soup.find("h2", string=lambda s: s and "信用取引" in s)
         if header is None:
-            return None
+            return []
         table = header.find_next("table")
-        row = table.select_one("tbody tr")
-        if row is None:
-            return None
-        cells = row.find_all(["th", "td"])
-        if len(cells) < 4:
-            return None
 
         def _num(cell) -> float | None:
             text = cell.get_text(strip=True).replace(",", "")
@@ -32,13 +26,25 @@ def get_margin_trading(ticker: str) -> dict | None:
             except ValueError:
                 return None
 
-        date_el = cells[0].find("time")
-        return {
-            "date": date_el.get("datetime") if date_el else cells[0].get_text(strip=True),
-            "sell_balance": _num(cells[1]),
-            "buy_balance": _num(cells[2]),
-            "ratio": _num(cells[3]),
-        }
+        history = []
+        for row in table.select("tbody tr")[:weeks]:
+            cells = row.find_all(["th", "td"])
+            if len(cells) < 4:
+                continue
+            date_el = cells[0].find("time")
+            history.append({
+                "date": date_el.get("datetime") if date_el else cells[0].get_text(strip=True),
+                "sell_balance": _num(cells[1]),
+                "buy_balance": _num(cells[2]),
+                "ratio": _num(cells[3]),
+            })
+        return history
     except Exception as e:
         print(f"信用取引データ取得エラー ({ticker}): {e}")
-        return None
+        return []
+
+
+def get_margin_trading(ticker: str) -> dict | None:
+    """信用取引残高（買い残・売り残・倍率、直近週次）を株探から取得する（日本株のみ）。"""
+    history = get_margin_trading_history(ticker, weeks=1)
+    return history[0] if history else None
