@@ -1,5 +1,6 @@
 # Personal data
 watchlist.json
+.env
 
 # Python cache
 __pycache__/

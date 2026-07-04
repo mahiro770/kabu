@@ -1,6 +1,6 @@
 import streamlit as st
 
-from src.ai_analyst import list_ollama_models
+from src.ai_analyst import list_model_choices
 from src.news_fetcher import fetch_nikkei_headlines, fetch_yahoo_business_news
 from src.stock_screener import screen_stocks_stream_with_timeout
 from src.ui import inject_theme
@@ -17,10 +17,12 @@ st.caption("経済ニュースの見出しをAIが分析し、翌営業日以降
 
 with st.sidebar:
     st.markdown("## ⚙️ 設定")
-    available_models = list_ollama_models()
+    available_models = list_model_choices()
+    model_label = lambda c: f"✨ {c.name} (Gemini)" if c.provider == "gemini" else f"🦙 {c.name}"
     selected_models = st.multiselect(
         "AIモデル（複数選択で比較可能）", available_models,
         default=available_models[:1],
+        format_func=model_label,
     )
     timeout_sec = st.slider("応答タイムアウト（秒）", 30, 300, 90, step=10,
                              help="モデルからの応答（チャンク）がこの秒数以上止まった場合、そのモデルを諦めて次に進みます")
@@ -46,12 +48,12 @@ if run_btn:
             st.divider()
             st.info("AIが見出しを分析し、注目銘柄を抽出します。**投資は自己責任でお願いします。**")
 
-            tabs = st.tabs(selected_models) if len(selected_models) > 1 else [st.container()]
+            tabs = st.tabs([model_label(m) for m in selected_models]) if len(selected_models) > 1 else [st.container()]
             for tab, model in zip(tabs, selected_models):
                 with tab:
                     placeholder = st.empty()
                     full_text = ""
-                    with st.spinner(f"{model} が分析中...（最大{timeout_sec}秒応答がなければ打ち切ります）"):
+                    with st.spinner(f"{model_label(model)} が分析中...（最大{timeout_sec}秒応答がなければ打ち切ります）"):
                         for chunk in screen_stocks_stream_with_timeout(news_items, model, timeout_sec):
                             full_text += chunk
                             placeholder.markdown(full_text)

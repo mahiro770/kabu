@@ -4,6 +4,9 @@ import threading
 import ollama
 from typing import Generator
 
+from src.ai_analyst import ModelChoice
+from src.gemini_client import stream_gemini
+
 
 def build_screening_prompt(news_items: list[dict]) -> str:
     lines = [f"{i}. [{item.get('source', '')}] {item['title']}"
@@ -30,15 +33,23 @@ def build_screening_prompt(news_items: list[dict]) -> str:
 """
 
 
-def screen_stocks_stream(news_items: list[dict], model: str) -> Generator[str, None, None]:
+def screen_stocks_stream(news_items: list[dict], model: ModelChoice) -> Generator[str, None, None]:
     if not news_items:
         yield "分析対象のニュースを取得できませんでした。"
         return
 
     prompt = build_screening_prompt(news_items)
+
+    if model.provider == "gemini":
+        try:
+            yield from stream_gemini(prompt, model.name)
+        except Exception as e:
+            yield f"\n\n**エラーが発生しました**\n\n```\n{e}\n```\n\nGemini APIキー（.envのGEMINI_API_KEY）が正しく設定されているか確認してください。"
+        return
+
     try:
         stream = ollama.chat(
-            model=model,
+            model=model.name,
             messages=[{"role": "user", "content": prompt}],
             stream=True,
         )
@@ -52,7 +63,7 @@ def screen_stocks_stream(news_items: list[dict], model: str) -> Generator[str, N
 
 def screen_stocks_stream_with_timeout(
     news_items: list[dict],
-    model: str,
+    model: ModelChoice,
     timeout: float = 90,
 ) -> Generator[str, None, None]:
     """screen_stocks_streamをラップし、chunk間が`timeout`秒空いたら諦めてタイムアウトメッセージを返す。
@@ -80,7 +91,7 @@ def screen_stocks_stream_with_timeout(
         except queue.Empty:
             yield (
                 f"\n\n**タイムアウトしました（{timeout:.0f}秒応答なし）**\n\n"
-                f"`{model}` からの応答がありませんでした。モデルの読み込みに時間がかかっているか、"
+                f"`{model.name}` からの応答がありませんでした。モデルの読み込みに時間がかかっているか、"
                 "処理待ちが混雑している可能性があります。時間をおくか、別のモデルをお試しください。"
             )
             return

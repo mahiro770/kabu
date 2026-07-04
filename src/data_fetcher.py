@@ -27,6 +27,27 @@ def get_stock_info(ticker: str) -> dict:
         return {}
 
 
+def get_earnings_forecast(ticker: str) -> dict | None:
+    """アナリストによる今期・来期の業績予想と目標株価を取得する。"""
+    try:
+        stock = yf.Ticker(ticker)
+        earnings_est = stock.earnings_estimate
+        revenue_est = stock.revenue_estimate
+        price_targets = stock.analyst_price_targets
+        has_earnings = earnings_est is not None and not earnings_est.empty
+        has_revenue = revenue_est is not None and not revenue_est.empty
+        if not has_earnings and not has_revenue and not price_targets:
+            return None
+        return {
+            "earnings_estimate": earnings_est if has_earnings else None,
+            "revenue_estimate": revenue_est if has_revenue else None,
+            "price_targets": price_targets or None,
+        }
+    except Exception as e:
+        print(f"業績予想データ取得エラー ({ticker}): {e}")
+        return None
+
+
 def get_financial_history(ticker: str) -> pd.DataFrame | None:
     """過去数年分の売上高・営業利益・純利益・自己資本比率を年度別に取得する。"""
     try:

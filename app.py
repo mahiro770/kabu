@@ -7,13 +7,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-from src.data_fetcher import get_stock_data, get_stock_info, get_financial_history
+from src.data_fetcher import get_stock_data, get_stock_info, get_financial_history, get_earnings_forecast
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
 from src.chart_builder import (
     build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart,
     build_adx_chart, build_obv_chart,
 )
-from src.ai_analyst import analyze_stock_stream, list_ollama_models
+from src.ai_analyst import analyze_stock_stream, list_model_choices
 from src.watchlist import load_watchlist, save_watchlist
 from src.ui import inject_theme
 
@@ -49,6 +49,14 @@ INDUSTRY_JA = {
     "Oil & Gas Integrated": "石油・ガス統合",
     "Drug Manufacturers - General": "医薬品メーカー",
     "Telecom Services": "通信サービス",
+}
+
+RECOMMENDATION_JA = {
+    "strong_buy": "強い買い",
+    "buy": "買い",
+    "hold": "中立",
+    "underperform": "やや売り",
+    "sell": "売り",
 }
 
 
@@ -88,6 +96,22 @@ def get_sector_display(info: dict, lang: str) -> str:
     return sector, industry
 
 
+def get_external_links(ticker: str, info: dict, is_japan: bool) -> list[tuple[str, str]]:
+    links = []
+    if is_japan:
+        code = ticker[:-2]
+        links.append(("四季報オンライン", f"https://shikiho.toyokeizai.net/stocks/{code}"))
+        links.append(("Kabutan", f"https://kabutan.jp/stock/?code={code}"))
+        links.append(("Yahoo!ファイナンス", f"https://finance.yahoo.co.jp/quote/{ticker}"))
+    else:
+        links.append(("Yahoo Finance", f"https://finance.yahoo.com/quote/{ticker}"))
+        links.append(("StockAnalysis.com", f"https://stockanalysis.com/stocks/{ticker}"))
+    website = info.get("website")
+    if website:
+        links.append(("公式サイト" if is_japan else "Official Site", website))
+    return links
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
 def translate_to_ja(text: str) -> str:
     try:
@@ -108,7 +132,7 @@ def signal_badge(sig: str) -> str:
 
 
 def _fmt_fin(val, fmt: str = ".1f", suffix: str = "") -> str:
-    if val is None:
+    if val is None or val != val:  # None or NaN
         return "N/A"
     try:
         return f"{val:{fmt}}{suffix}"
@@ -117,13 +141,13 @@ def _fmt_fin(val, fmt: str = ".1f", suffix: str = "") -> str:
 
 
 def _fmt_pct(val) -> str:
-    if val is None:
+    if val is None or val != val:  # None or NaN
         return "N/A"
     return f"{val * 100:.2f}%"
 
 
 def _fmt_cap(val, currency: str) -> str:
-    if val is None:
+    if val is None or val != val:  # None or NaN
         return "N/A"
     if currency == "JPY":
         if val >= 1e12:
@@ -137,7 +161,10 @@ def _fmt_cap(val, currency: str) -> str:
         return f"${val/1e6:.0f}M"
 
 
-def display_financials(info: dict, currency: str, lang: str = "日本語", fin_history=None) -> None:
+def display_financials(
+    info: dict, currency: str, lang: str = "日本語", fin_history=None,
+    forecast=None, ticker: str = "", is_japan: bool = True,
+) -> None:
     ja = lang == "日本語"
     mult = "倍" if ja else "x"
 
@@ -194,6 +221,60 @@ def display_financials(info: dict, currency: str, lang: str = "日本語", fin_h
             )
         st.markdown("\n".join(rows))
 
+    # 業績予想（アナリストコンセンサス）
+    if forecast:
+        earnings_est = forecast.get("earnings_estimate")
+        revenue_est = forecast.get("revenue_estimate")
+        if (earnings_est is not None and not earnings_est.empty) or \
+                (revenue_est is not None and not revenue_est.empty):
+            st.markdown("#### 業績予想（アナリスト予想）" if ja else "#### Earnings Forecast (Analyst Consensus)")
+            header = "| 期 | 予想EPS | 増益率 | 予想売上高 | 増収率 | アナリスト数 |" if ja \
+                else "| Period | Est. EPS | EPS Growth | Est. Revenue | Rev. Growth | # Analysts |"
+            rows = [header, "|------|------|------|------|------|------|"]
+            # yfinanceの revenue_estimate.growth は yearAgoRevenue が異常値になるケースがあるため、
+            # 直近の実績売上高（fin_history）を基準に増収率を計算し直す。
+            prev_rev_base = (
+                fin_history.iloc[0]["revenue"]
+                if fin_history is not None and not fin_history.empty else None
+            )
+            for period, period_label in [("0y", "今期" if ja else "This FY"), ("+1y", "来期" if ja else "Next FY")]:
+                eps_row = earnings_est.loc[period] if earnings_est is not None and period in earnings_est.index else None
+                rev_row = revenue_est.loc[period] if revenue_est is not None and period in revenue_est.index else None
+                eps_avg = eps_row["avg"] if eps_row is not None else None
+                eps_growth = eps_row["growth"] if eps_row is not None else None
+                rev_avg = rev_row["avg"] if rev_row is not None else None
+                if rev_avg is not None and prev_rev_base:
+                    rev_growth = (rev_avg - prev_rev_base) / prev_rev_base
+                else:
+                    rev_growth = rev_row["growth"] if rev_row is not None else None
+                if rev_avg is not None:
+                    prev_rev_base = rev_avg
+                def _safe_int(v):
+                    return int(v) if v is not None and v == v else None
+                n_analysts = _safe_int(eps_row["numberOfAnalysts"]) if eps_row is not None else None
+                if n_analysts is None and rev_row is not None:
+                    n_analysts = _safe_int(rev_row["numberOfAnalysts"])
+                rows.append(
+                    f"| {period_label} | {_fmt_fin(eps_avg, '.2f')} | {_fmt_pct(eps_growth)} | "
+                    f"{_fmt_cap(rev_avg, currency)} | {_fmt_pct(rev_growth)} | "
+                    f"{n_analysts if n_analysts is not None else 'N/A'} |"
+                )
+            st.markdown("\n".join(rows))
+
+        price_targets = forecast.get("price_targets")
+        if price_targets:
+            t1, t2, t3, t4, t5 = st.columns(5)
+            t1.metric("現在株価" if ja else "Current Price", _fmt_fin(price_targets.get("current"), ",.0f"))
+            t2.metric("目標株価（平均）" if ja else "Target (Mean)", _fmt_fin(price_targets.get("mean"), ",.0f"))
+            t3.metric("目標株価（高値）" if ja else "Target (High)", _fmt_fin(price_targets.get("high"), ",.0f"))
+            t4.metric("目標株価（安値）" if ja else "Target (Low)", _fmt_fin(price_targets.get("low"), ",.0f"))
+            rec_key = info.get("recommendationKey")
+            if not rec_key or rec_key == "none":
+                rec_label = "N/A"
+            else:
+                rec_label = RECOMMENDATION_JA.get(rec_key, rec_key) if ja else rec_key
+            t5.metric("アナリスト評価" if ja else "Analyst Rating", rec_label)
+
     # 会社概要
     summary = info.get("longBusinessSummary") or info.get("description")
     if summary:
@@ -203,6 +284,30 @@ def display_financials(info: dict, currency: str, lang: str = "日本語", fin_h
                 with st.spinner("翻訳中..."):
                     summary = translate_to_ja(summary)
             st.write(summary)
+
+    # 役員一覧
+    officers = info.get("companyOfficers")
+    if officers:
+        label = "役員一覧" if ja else "Company Officers"
+        with st.expander(label):
+            header = "| 氏名 | 役職 | 年齢 |" if ja else "| Name | Title | Age |"
+            rows = [header, "|------|------|------|"]
+            for o in officers[:8]:
+                rows.append(f"| {o.get('name', 'N/A')} | {o.get('title', 'N/A')} | {o.get('age', 'N/A')} |")
+            st.markdown("\n".join(rows))
+
+    # 関連リンク（四季報・株価情報サイトなど）
+    links = get_external_links(ticker, info, is_japan) if ticker else []
+    if links:
+        label = "関連リンク" if ja else "Related Links"
+        st.markdown(f"#### {label}")
+        st.markdown(" 　".join(f"[{name}]({url})" for name, url in links))
+        if is_japan:
+            st.caption(
+                "※ 四季報の詳細情報は東洋経済新報社の有料コンテンツのため、リンク先でご確認ください。"
+                if ja else
+                "* Shikiho content is a paid publication by Toyo Keizai — please check the linked page for details."
+            )
 
 
 if "watchlist" not in st.session_state:
@@ -243,7 +348,11 @@ with st.sidebar:
     st.divider()
     st.markdown("## ⚙️ 設定")
 
-    selected_model = st.selectbox("AIモデル", list_ollama_models())
+    selected_model = st.selectbox(
+        "AIモデル",
+        list_model_choices(),
+        format_func=lambda c: f"✨ {c.name} (Gemini)" if c.provider == "gemini" else f"🦙 {c.name}",
+    )
 
     lang = st.radio("表示言語", ["日本語", "English"], horizontal=True)
 
@@ -296,8 +405,10 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
 
         name = get_display_name(info, lang, is_japan)
         currency = info.get("currency", "JPY" if is_japan else "USD")
-        current = df["close"].iloc[-1]
-        prev = df["close"].iloc[-2] if len(df) > 1 else current
+        # 直近行の終値が未確定（NaN）なことがあるため、直近の有効な終値を使う
+        close_valid = df["close"].dropna()
+        current = close_valid.iloc[-1] if not close_valid.empty else float("nan")
+        prev = close_valid.iloc[-2] if len(close_valid) > 1 else current
         change = current - prev
         change_pct = change / prev * 100
 
@@ -409,15 +520,16 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
 
         with tab3:
             if info:
-                with st.spinner("過去の業績データを取得中..."):
+                with st.spinner("過去の業績データ・業績予想を取得中..."):
                     fin_history = get_financial_history(ticker)
-                display_financials(info, currency, lang, fin_history)
+                    forecast = get_earnings_forecast(ticker)
+                display_financials(info, currency, lang, fin_history, forecast, ticker, is_japan)
             else:
                 st.warning("財務データを取得できませんでした")
 
         with tab4:
             st.info("AIがテクニカル指標・価格動向・財務データを総合分析します。**投資は自己責任でお願いします。**")
-            st.caption(f"使用モデル: {selected_model}")
+            st.caption(f"使用モデル: {selected_model.name}")
 
             if st.button("🤖 AI分析を実行", type="primary", key="ai_btn"):
                 placeholder = st.empty()

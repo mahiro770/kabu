@@ -1,6 +1,13 @@
 import pandas as pd
 import ollama
-from typing import Generator
+from typing import Generator, NamedTuple
+
+from src.gemini_client import GEMINI_MODELS, is_available as gemini_available, stream_gemini
+
+
+class ModelChoice(NamedTuple):
+    provider: str  # "ollama" or "gemini"
+    name: str
 
 
 def list_ollama_models() -> list[str]:
@@ -9,6 +16,23 @@ def list_ollama_models() -> list[str]:
         return names or ["gemma4:12b"]
     except Exception:
         return ["gemma4:12b"]
+
+
+def ollama_reachable() -> bool:
+    try:
+        ollama.list()
+        return True
+    except Exception:
+        return False
+
+
+def list_model_choices() -> list[ModelChoice]:
+    choices = []
+    if ollama_reachable():
+        choices += [ModelChoice("ollama", m) for m in list_ollama_models()]
+    if gemini_available():
+        choices += [ModelChoice("gemini", m) for m in GEMINI_MODELS]
+    return choices
 
 
 def _fmt(v, decimals: int = 2) -> str:
@@ -134,12 +158,20 @@ def analyze_stock_stream(
     info: dict,
     signals: dict,
     stats: dict,
-    model: str,
+    model: ModelChoice,
 ) -> Generator[str, None, None]:
     prompt = _build_prompt(df, info, signals, stats)
+
+    if model.provider == "gemini":
+        try:
+            yield from stream_gemini(prompt, model.name)
+        except Exception as e:
+            yield f"\n\n**エラーが発生しました**\n\n```\n{e}\n```\n\nGemini APIキー（.envのGEMINI_API_KEY）が正しく設定されているか確認してください。"
+        return
+
     try:
         stream = ollama.chat(
-            model=model,
+            model=model.name,
             messages=[{"role": "user", "content": prompt}],
             stream=True,
         )
