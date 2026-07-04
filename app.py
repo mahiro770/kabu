@@ -10,6 +10,7 @@ st.set_page_config(
 from src.data_fetcher import get_stock_data, get_stock_info, get_financial_history, get_earnings_forecast, get_major_holders
 from src.margin_fetcher import get_margin_trading
 from src.holder_fetcher import get_major_shareholders_jp
+from src.stock_search import search_stock
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
 from src.chart_builder import (
     build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart,
@@ -148,6 +149,25 @@ def _normalize_ticker(t: str) -> str:
     if t.isdigit():
         return f"{t}.T"
     return t
+
+
+def _resolve_stock(raw: str, period: str = "5d"):
+    """入力値をティッカーとして解決し、価格データを取得する。
+    ティッカーとして直接取得できなければ、会社名として検索して再試行する。
+    戻り値: (ticker, df, info, resolved_by_name)
+    """
+    ticker = _normalize_ticker(raw)
+    df = get_stock_data(ticker, period)
+    if df is not None and not df.empty:
+        return ticker, df, get_stock_info(ticker), False
+
+    for candidate in search_stock(raw):
+        cand_ticker = candidate["ticker"]
+        cand_df = get_stock_data(cand_ticker, period)
+        if cand_df is not None and not cand_df.empty:
+            return cand_ticker, cand_df, get_stock_info(cand_ticker), True
+
+    return ticker, None, {}, False
 
 
 def _fmt_pct(val) -> str:
@@ -353,7 +373,10 @@ def display_financials(
 
 
 if "watchlist" not in st.session_state:
-    st.session_state.watchlist = load_watchlist()
+    st.session_state.watchlist = [
+        w if isinstance(w, dict) else {"ticker": w, "name": w}
+        for w in load_watchlist()
+    ]
 if "current_ticker" not in st.session_state:
     st.session_state.current_ticker = ""
 
@@ -361,14 +384,22 @@ if "current_ticker" not in st.session_state:
 with st.sidebar:
     st.markdown("## 📋 ウォッチリスト")
 
-    new_ticker = st.text_input("銘柄追加（例: 7203）", key="add_ticker_input",
-                               placeholder="7203 / AAPL")
+    new_ticker = st.text_input("銘柄追加（例: 7203 / トヨタ）", key="add_ticker_input",
+                               placeholder="7203 / トヨタ / AAPL")
     if st.button("追加", use_container_width=True):
-        t = _normalize_ticker(new_ticker)
-        if t and t not in st.session_state.watchlist:
-            st.session_state.watchlist.append(t)
-            save_watchlist(st.session_state.watchlist)
-            st.rerun()
+        raw = new_ticker.strip()
+        if raw:
+            with st.spinner("検索中..."):
+                t, _df, wl_info, _resolved = _resolve_stock(raw)
+            if t is None:
+                st.warning(f"「{raw}」が見つかりませんでした。")
+            elif any(w["ticker"] == t for w in st.session_state.watchlist):
+                st.info(f"「{t}」は既に追加されています。")
+            else:
+                wl_name = get_display_name(wl_info, "日本語", t.endswith(".T")) if wl_info else t
+                st.session_state.watchlist.append({"ticker": t, "name": wl_name or t})
+                save_watchlist(st.session_state.watchlist)
+                st.rerun()
 
     st.divider()
 
@@ -376,8 +407,8 @@ with st.sidebar:
         for i, wt in enumerate(st.session_state.watchlist):
             col_a, col_b = st.columns([5, 1])
             with col_a:
-                if st.button(wt, key=f"wl_{i}", use_container_width=True):
-                    st.session_state.current_ticker = wt
+                if st.button(wt["name"], key=f"wl_{i}", use_container_width=True):
+                    st.session_state.current_ticker = wt["ticker"]
                     st.rerun()
             with col_b:
                 if st.button("✕", key=f"del_{i}", help="削除"):
@@ -416,15 +447,18 @@ with col_input:
     ticker_input = st.text_input(
         "銘柄コード",
         value=st.session_state.current_ticker,
-        placeholder="日本株: 7203（トヨタ）　米国株: AAPL（Apple）",
+        placeholder="日本株: 7203 / トヨタ　米国株: AAPL / Apple",
         label_visibility="collapsed",
     )
 with col_btn:
     analyze_btn = st.button("分析", type="primary", use_container_width=True)
 
-ticker = _normalize_ticker(ticker_input)
+ticker_raw = ticker_input.strip()
+normalized_preview = _normalize_ticker(ticker_raw)
 
-if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and ticker)):
+if normalized_preview and (analyze_btn or (st.session_state.current_ticker == normalized_preview and normalized_preview)):
+    with st.spinner(f"「{ticker_raw}」を検索中..."):
+        ticker, df, info, resolved_by_name = _resolve_stock(ticker_raw, period)
     st.session_state.current_ticker = ticker
 
     # 日本株か米国株かで比較インデックスを決定
@@ -432,15 +466,14 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
     index_ticker = "^N225" if is_japan else "^GSPC"
     index_name = "日経平均" if is_japan else "S&P 500"
 
-    with st.spinner(f"{ticker} のデータを取得中..."):
-        df = get_stock_data(ticker, period)
-        info = get_stock_info(ticker)
-        idx_df = get_stock_data(index_ticker, period)
-
     if df is None or df.empty:
-        st.error(f"「{ticker}」のデータを取得できませんでした。銘柄コードを確認してください。")
-        st.info("日本株は末尾に `.T` を付けてください（例: トヨタ → `7203.T`）")
+        st.error(f"「{ticker_raw}」のデータを取得できませんでした。銘柄コードまたは会社名を確認してください。")
+        st.info("日本株は数字4桁のコード（例: 7203）または会社名（例: トヨタ）で検索できます。")
     else:
+        if resolved_by_name:
+            st.caption(f"🔍「{ticker_raw}」→ **{ticker}** の検索結果を表示しています")
+        with st.spinner(f"{index_name}のデータを取得中..."):
+            idx_df = get_stock_data(index_ticker, period)
         df = add_indicators(df)
         signals = get_signals(df)
         stats = get_summary_stats(df, info)
