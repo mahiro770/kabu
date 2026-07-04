@@ -240,20 +240,20 @@ def display_financials(
             for period, period_label in [("0y", "今期" if ja else "This FY"), ("+1y", "来期" if ja else "Next FY")]:
                 eps_row = earnings_est.loc[period] if earnings_est is not None and period in earnings_est.index else None
                 rev_row = revenue_est.loc[period] if revenue_est is not None and period in revenue_est.index else None
-                eps_avg = eps_row["avg"] if eps_row is not None else None
-                eps_growth = eps_row["growth"] if eps_row is not None else None
-                rev_avg = rev_row["avg"] if rev_row is not None else None
+                eps_avg = eps_row.get("avg") if eps_row is not None else None
+                eps_growth = eps_row.get("growth") if eps_row is not None else None
+                rev_avg = rev_row.get("avg") if rev_row is not None else None
                 if rev_avg is not None and prev_rev_base:
                     rev_growth = (rev_avg - prev_rev_base) / prev_rev_base
                 else:
-                    rev_growth = rev_row["growth"] if rev_row is not None else None
+                    rev_growth = rev_row.get("growth") if rev_row is not None else None
                 if rev_avg is not None:
                     prev_rev_base = rev_avg
                 def _safe_int(v):
                     return int(v) if v is not None and v == v else None
-                n_analysts = _safe_int(eps_row["numberOfAnalysts"]) if eps_row is not None else None
+                n_analysts = _safe_int(eps_row.get("numberOfAnalysts")) if eps_row is not None else None
                 if n_analysts is None and rev_row is not None:
-                    n_analysts = _safe_int(rev_row["numberOfAnalysts"])
+                    n_analysts = _safe_int(rev_row.get("numberOfAnalysts"))
                 rows.append(
                     f"| {period_label} | {_fmt_fin(eps_avg, '.2f')} | {_fmt_pct(eps_growth)} | "
                     f"{_fmt_cap(rev_avg, currency)} | {_fmt_pct(rev_growth)} | "
