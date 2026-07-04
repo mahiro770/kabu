@@ -8,6 +8,7 @@ st.set_page_config(
 )
 
 from src.data_fetcher import get_stock_data, get_stock_info, get_financial_history, get_earnings_forecast, get_major_holders
+from src.margin_fetcher import get_margin_trading
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
 from src.chart_builder import (
     build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart,
@@ -172,6 +173,7 @@ def _fmt_cap(val, currency: str) -> str:
 def display_financials(
     info: dict, currency: str, lang: str = "日本語", fin_history=None,
     forecast=None, ticker: str = "", is_japan: bool = True, major_holders=None,
+    margin_trading=None,
 ) -> None:
     ja = lang == "日本語"
     mult = "倍" if ja else "x"
@@ -217,6 +219,14 @@ def display_financials(
         if fin_history is not None and not fin_history.empty else None
     )
     g7.metric("自己資本比率" if ja else "Equity Ratio", _fmt_pct(latest_equity_ratio))
+
+    if is_japan and margin_trading is not None:
+        st.markdown("#### 信用取引" if ja else "#### Margin Trading")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("信用買残" if ja else "Margin Buy Balance", _fmt_fin(margin_trading.get("buy_balance"), ",.1f", "千株" if ja else "K shares"))
+        m2.metric("信用売残" if ja else "Margin Sell Balance", _fmt_fin(margin_trading.get("sell_balance"), ",.1f", "千株" if ja else "K shares"))
+        m3.metric("信用倍率" if ja else "Margin Ratio", _fmt_fin(margin_trading.get("ratio"), ".2f", mult))
+        st.caption(f"{'時点' if ja else 'As of'}: {margin_trading.get('date', 'N/A')}（{'株探' if ja else 'Kabutan'}調べ）")
 
     if fin_history is not None and not fin_history.empty:
         st.markdown("#### 過去の業績推移" if ja else "#### Historical Performance")
@@ -551,7 +561,8 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
                     fin_history = get_financial_history(ticker)
                     forecast = get_earnings_forecast(ticker)
                     major_holders = get_major_holders(ticker)
-                display_financials(info, currency, lang, fin_history, forecast, ticker, is_japan, major_holders)
+                    margin_trading = get_margin_trading(ticker) if is_japan else None
+                display_financials(info, currency, lang, fin_history, forecast, ticker, is_japan, major_holders, margin_trading)
             else:
                 st.warning("財務データを取得できませんでした")
 
