@@ -7,7 +7,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-from src.data_fetcher import get_stock_data, get_stock_info, get_financial_history, get_earnings_forecast
+from src.data_fetcher import get_stock_data, get_stock_info, get_financial_history, get_earnings_forecast, get_major_holders
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
 from src.chart_builder import (
     build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart,
@@ -171,7 +171,7 @@ def _fmt_cap(val, currency: str) -> str:
 
 def display_financials(
     info: dict, currency: str, lang: str = "日本語", fin_history=None,
-    forecast=None, ticker: str = "", is_japan: bool = True,
+    forecast=None, ticker: str = "", is_japan: bool = True, major_holders=None,
 ) -> None:
     ja = lang == "日本語"
     mult = "倍" if ja else "x"
@@ -305,6 +305,22 @@ def display_financials(
             rows = [header, "|------|------|------|"]
             for o in officers[:8]:
                 rows.append(f"| {o.get('name', 'N/A')} | {o.get('title', 'N/A')} | {o.get('age', 'N/A')} |")
+            st.markdown("\n".join(rows))
+
+    # 大株主一覧
+    if major_holders is not None and not major_holders.empty:
+        label = "大株主一覧" if ja else "Major Shareholders"
+        with st.expander(label):
+            header = "| 株主名 | 保有比率 | 保有株数 | 保有金額 |" if ja \
+                else "| Holder | % Held | Shares | Value |"
+            rows = [header, "|------|------|------|------|"]
+            for _, row in major_holders.head(10).iterrows():
+                shares = row.get("Shares")
+                shares_str = f"{int(shares):,}" if shares is not None and shares == shares else "N/A"
+                rows.append(
+                    f"| {row.get('Holder', 'N/A')} | {_fmt_pct(row.get('pctHeld'))} | "
+                    f"{shares_str} | {_fmt_cap(row.get('Value'), currency)} |"
+                )
             st.markdown("\n".join(rows))
 
     # 関連リンク（四季報・株価情報サイトなど）
@@ -534,7 +550,8 @@ if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and tic
                 with st.spinner("過去の業績データ・業績予想を取得中..."):
                     fin_history = get_financial_history(ticker)
                     forecast = get_earnings_forecast(ticker)
-                display_financials(info, currency, lang, fin_history, forecast, ticker, is_japan)
+                    major_holders = get_major_holders(ticker)
+                display_financials(info, currency, lang, fin_history, forecast, ticker, is_japan, major_holders)
             else:
                 st.warning("財務データを取得できませんでした")
 

@@ -48,6 +48,19 @@ def get_earnings_forecast(ticker: str) -> dict | None:
         return None
 
 
+def get_major_holders(ticker: str) -> pd.DataFrame | None:
+    """機関投資家・大株主の保有比率上位を取得する。"""
+    try:
+        stock = yf.Ticker(ticker)
+        holders = stock.institutional_holders
+        if holders is None or holders.empty:
+            return None
+        return holders.sort_values("pctHeld", ascending=False).reset_index(drop=True)
+    except Exception as e:
+        print(f"大株主データ取得エラー ({ticker}): {e}")
+        return None
+
+
 def get_financial_history(ticker: str) -> pd.DataFrame | None:
     """過去数年分の売上高・営業利益・純利益・自己資本比率を年度別に取得する。"""
     try:
