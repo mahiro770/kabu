@@ -17,7 +17,10 @@ from src.chart_builder import (
     build_adx_chart, build_obv_chart,
 )
 from src.ai_analyst import analyze_stock_stream, list_model_choices
-from src.watchlist import load_watchlist, save_watchlist, load_personal_watchlist, save_personal_watchlist
+from src.watchlist import (
+    load_watchlist, save_watchlist, load_personal_watchlist, save_personal_watchlist,
+    get_personal_record, verify_passphrase, claim_personal_name,
+)
 from src.ui import inject_theme
 
 inject_theme()
@@ -444,10 +447,6 @@ with st.sidebar:
     username = st.text_input("あなたの名前", key="username_input", placeholder="例: まひろ")
     username = username.strip() or "匿名"
 
-    if username != "匿名" and st.session_state.personal_watchlist_owner != username:
-        st.session_state.personal_watchlist = load_personal_watchlist(username)
-        st.session_state.personal_watchlist_owner = username
-
     tab_shared, tab_personal = st.tabs(["🌐 共有", "👤 個人"])
     with tab_shared:
         st.caption("訪問者全員に共有されるリストです。")
@@ -456,12 +455,37 @@ with st.sidebar:
         if username == "匿名":
             st.info("⬆️ 上の「あなたの名前」を入力すると、自分専用のリストを追加できるようになります。")
         else:
-            st.caption(f"「{username}」さん専用のリストです。")
-            _render_watchlist(
-                st.session_state.personal_watchlist,
-                lambda wl: save_personal_watchlist(username, wl),
-                "personal", False, username,
+            record = get_personal_record(username)
+            passphrase = st.text_input(
+                "合言葉", type="password", key="passphrase_input",
+                help="このお名前を他人が使えないようにするための合言葉です。初めて使うお名前なら自由に決めてください。",
             )
+            if record is None:
+                if not passphrase:
+                    st.caption("🆕 初めてのお名前です。合言葉を決めて入力すると個人リストが使えます。")
+                else:
+                    claim_personal_name(username, passphrase)
+                    if st.session_state.personal_watchlist_owner != username:
+                        st.session_state.personal_watchlist = []
+                        st.session_state.personal_watchlist_owner = username
+                    _render_watchlist(
+                        st.session_state.personal_watchlist,
+                        lambda wl: save_personal_watchlist(username, wl),
+                        "personal", False, username,
+                    )
+            elif not passphrase:
+                st.warning("🔒 合言葉を入力してください。")
+            elif not verify_passphrase(username, passphrase):
+                st.error("合言葉が違います。別のお名前をお使いください。")
+            else:
+                if st.session_state.personal_watchlist_owner != username:
+                    st.session_state.personal_watchlist = load_personal_watchlist(username)
+                    st.session_state.personal_watchlist_owner = username
+                _render_watchlist(
+                    st.session_state.personal_watchlist,
+                    lambda wl: save_personal_watchlist(username, wl),
+                    "personal", False, username,
+                )
 
     st.divider()
     st.markdown("## ⚙️ 設定")
