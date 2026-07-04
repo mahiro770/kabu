@@ -102,6 +102,7 @@ def get_external_links(ticker: str, info: dict, is_japan: bool) -> list[tuple[st
         code = ticker[:-2]
         links.append(("四季報オンライン", f"https://shikiho.toyokeizai.net/stocks/{code}"))
         links.append(("Kabutan", f"https://kabutan.jp/stock/?code={code}"))
+        links.append(("バフェット・コード", f"https://www.buffett-code.com/company/{code}"))
         links.append(("Yahoo!ファイナンス", f"https://finance.yahoo.co.jp/quote/{ticker}"))
     else:
         links.append(("Yahoo Finance", f"https://finance.yahoo.com/quote/{ticker}"))
