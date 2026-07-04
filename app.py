@@ -181,20 +181,23 @@ def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, u
     if st.button("追加", key=f"{key_prefix}_add_btn", use_container_width=True):
         raw = new_ticker.strip()
         if raw:
-            with st.spinner("検索中..."):
-                t, _df, wl_info, _resolved = _resolve_stock(raw)
-            if t is None:
+            try:
+                with st.spinner("検索中..."):
+                    t, _df, wl_info, _resolved = _resolve_stock(raw)
+                if t is None:
+                    st.warning(f"「{raw}」が見つかりませんでした。")
+                elif any(w["ticker"] == t for w in wl):
+                    st.info(f"「{t}」は既に追加されています。")
+                else:
+                    wl_name = get_display_name(wl_info, "日本語", t.endswith(".T")) if wl_info else t
+                    entry = {"ticker": t, "name": wl_name or t}
+                    if show_added_by:
+                        entry["added_by"] = username
+                    wl.append(entry)
+                    save_fn(wl)
+                    st.rerun()
+            except Exception:
                 st.warning(f"「{raw}」が見つかりませんでした。")
-            elif any(w["ticker"] == t for w in wl):
-                st.info(f"「{t}」は既に追加されています。")
-            else:
-                wl_name = get_display_name(wl_info, "日本語", t.endswith(".T")) if wl_info else t
-                entry = {"ticker": t, "name": wl_name or t}
-                if show_added_by:
-                    entry["added_by"] = username
-                wl.append(entry)
-                save_fn(wl)
-                st.rerun()
 
     st.divider()
 

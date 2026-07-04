@@ -37,9 +37,9 @@ def _save_all(file_path: str, data: dict) -> None:
 
 
 def _get_record(file_path: str, key: str) -> dict | None:
-    """keyが既に登録済みなら {"passphrase_hash":.., "items":[..]} を返す。未登録ならNone。"""
+    """keyが既に登録済みなら {"passphrase_hash":.., "items":[..]} を返す。未登録・旧形式ならNone。"""
     record = _load_all(file_path).get(key)
-    if record and "items" in record:
+    if isinstance(record, dict) and "items" in record:
         return record
     return None
 
@@ -52,9 +52,9 @@ def _verify_passphrase(file_path: str, key: str, passphrase: str) -> bool:
 
 
 def _claim_name(file_path: str, key: str, passphrase: str) -> None:
-    """未登録のkeyを合言葉付きで新規登録する（既に登録済みなら何もしない）。"""
+    """未登録（または旧形式）のkeyを合言葉付きで新規登録する。"""
     data = _load_all(file_path)
-    if key not in data:
+    if _get_record(file_path, key) is None:
         data[key] = {"passphrase_hash": _hash_passphrase(passphrase), "items": []}
         _save_all(file_path, data)
 
@@ -66,9 +66,9 @@ def _load_items(file_path: str, key: str) -> list:
 
 def _save_items(file_path: str, key: str, items: list) -> None:
     data = _load_all(file_path)
-    record = data.get(key, {"passphrase_hash": None, "items": []})
-    record["items"] = items
-    data[key] = record
+    existing = data.get(key)
+    passphrase_hash = existing.get("passphrase_hash") if isinstance(existing, dict) else None
+    data[key] = {"passphrase_hash": passphrase_hash, "items": items}
     _save_all(file_path, data)
 
 
