@@ -382,7 +382,11 @@ if "current_ticker" not in st.session_state:
 
 # ─── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 📋 ウォッチリスト")
+    st.markdown("## 📋 共有ウォッチリスト")
+    st.caption("このリストは訪問者全員に共有されます。名前を入れておくと誰が追加したか分かります。")
+
+    username = st.text_input("あなたの名前", key="username_input", placeholder="例: まひろ")
+    username = username.strip() or "匿名"
 
     new_ticker = st.text_input("銘柄追加（例: 7203 / トヨタ）", key="add_ticker_input",
                                placeholder="7203 / トヨタ / AAPL")
@@ -397,7 +401,9 @@ with st.sidebar:
                 st.info(f"「{t}」は既に追加されています。")
             else:
                 wl_name = get_display_name(wl_info, "日本語", t.endswith(".T")) if wl_info else t
-                st.session_state.watchlist.append({"ticker": t, "name": wl_name or t})
+                st.session_state.watchlist.append({
+                    "ticker": t, "name": wl_name or t, "added_by": username,
+                })
                 save_watchlist(st.session_state.watchlist)
                 st.rerun()
 
@@ -410,6 +416,7 @@ with st.sidebar:
                 if st.button(wt["name"], key=f"wl_{i}", use_container_width=True):
                     st.session_state.current_ticker = wt["ticker"]
                     st.rerun()
+                st.caption(f"追加: {wt.get('added_by', '匿名')}")
             with col_b:
                 if st.button("✕", key=f"del_{i}", help="削除"):
                     st.session_state.watchlist.pop(i)
