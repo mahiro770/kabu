@@ -1,6 +1,7 @@
 # Personal data
 watchlist.json
 personal_watchlists.json
+community_watchlists.json
 .env
 
 # Python cache
