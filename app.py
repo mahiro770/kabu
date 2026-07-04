@@ -140,6 +140,13 @@ def _fmt_fin(val, fmt: str = ".1f", suffix: str = "") -> str:
         return "N/A"
 
 
+def _normalize_ticker(t: str) -> str:
+    t = t.strip().upper()
+    if t.isdigit():
+        return f"{t}.T"
+    return t
+
+
 def _fmt_pct(val) -> str:
     if val is None or val != val:  # None or NaN
         return "N/A"
@@ -190,7 +197,7 @@ def display_financials(
     p5.metric("粗利益率" if ja else "Gross Margin", _fmt_pct(info.get("grossMargins")))
 
     st.markdown("#### 成長性・財務健全性" if ja else "#### Growth & Financial Health")
-    g1, g2, g3, g4, g5, g6 = st.columns(6)
+    g1, g2, g3, g4, g5, g6, g7 = st.columns(7)
     g1.metric("売上成長率" if ja else "Revenue Growth", _fmt_pct(info.get("revenueGrowth")))
     g2.metric("利益成長率" if ja else "Earnings Growth", _fmt_pct(info.get("earningsGrowth")))
     g3.metric("流動比率" if ja else "Current Ratio", _fmt_fin(info.get("currentRatio"), ".2f"))
@@ -201,11 +208,12 @@ def display_financials(
     else:
         div_str = "N/A"
     g5.metric("配当利回り" if ja else "Dividend Yield", div_str)
+    g6.metric("配当性向" if ja else "Payout Ratio", _fmt_pct(info.get("payoutRatio")))
     latest_equity_ratio = (
         fin_history.iloc[0]["equity_ratio"]
         if fin_history is not None and not fin_history.empty else None
     )
-    g6.metric("自己資本比率" if ja else "Equity Ratio", _fmt_pct(latest_equity_ratio))
+    g7.metric("自己資本比率" if ja else "Equity Ratio", _fmt_pct(latest_equity_ratio))
 
     if fin_history is not None and not fin_history.empty:
         st.markdown("#### 過去の業績推移" if ja else "#### Historical Performance")
@@ -319,10 +327,10 @@ if "current_ticker" not in st.session_state:
 with st.sidebar:
     st.markdown("## 📋 ウォッチリスト")
 
-    new_ticker = st.text_input("銘柄追加（例: 7203.T）", key="add_ticker_input",
-                               placeholder="7203.T / AAPL")
+    new_ticker = st.text_input("銘柄追加（例: 7203）", key="add_ticker_input",
+                               placeholder="7203 / AAPL")
     if st.button("追加", use_container_width=True):
-        t = new_ticker.strip().upper()
+        t = _normalize_ticker(new_ticker)
         if t and t not in st.session_state.watchlist:
             st.session_state.watchlist.append(t)
             save_watchlist(st.session_state.watchlist)
@@ -374,13 +382,13 @@ with col_input:
     ticker_input = st.text_input(
         "銘柄コード",
         value=st.session_state.current_ticker,
-        placeholder="日本株: 7203.T（トヨタ）　米国株: AAPL（Apple）",
+        placeholder="日本株: 7203（トヨタ）　米国株: AAPL（Apple）",
         label_visibility="collapsed",
     )
 with col_btn:
     analyze_btn = st.button("分析", type="primary", use_container_width=True)
 
-ticker = ticker_input.strip().upper()
+ticker = _normalize_ticker(ticker_input)
 
 if ticker and (analyze_btn or (st.session_state.current_ticker == ticker and ticker)):
     st.session_state.current_ticker = ticker
