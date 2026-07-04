@@ -17,7 +17,7 @@ from src.chart_builder import (
     build_adx_chart, build_obv_chart,
 )
 from src.ai_analyst import analyze_stock_stream, list_model_choices
-from src.watchlist import load_watchlist, save_watchlist
+from src.watchlist import load_watchlist, save_watchlist, load_personal_watchlist, save_personal_watchlist
 from src.ui import inject_theme
 
 inject_theme()
@@ -168,6 +168,47 @@ def _resolve_stock(raw: str, period: str = "5d"):
             return cand_ticker, cand_df, get_stock_info(cand_ticker), True
 
     return ticker, None, {}, False
+
+
+def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, username: str) -> None:
+    new_ticker = st.text_input("銘柄追加（例: 7203 / トヨタ）", key=f"{key_prefix}_add_input",
+                               placeholder="7203 / トヨタ / AAPL")
+    if st.button("追加", key=f"{key_prefix}_add_btn", use_container_width=True):
+        raw = new_ticker.strip()
+        if raw:
+            with st.spinner("検索中..."):
+                t, _df, wl_info, _resolved = _resolve_stock(raw)
+            if t is None:
+                st.warning(f"「{raw}」が見つかりませんでした。")
+            elif any(w["ticker"] == t for w in wl):
+                st.info(f"「{t}」は既に追加されています。")
+            else:
+                wl_name = get_display_name(wl_info, "日本語", t.endswith(".T")) if wl_info else t
+                entry = {"ticker": t, "name": wl_name or t}
+                if show_added_by:
+                    entry["added_by"] = username
+                wl.append(entry)
+                save_fn(wl)
+                st.rerun()
+
+    st.divider()
+
+    if wl:
+        for i, wt in enumerate(wl):
+            col_a, col_b = st.columns([5, 1])
+            with col_a:
+                if st.button(wt["name"], key=f"{key_prefix}_sel_{i}", use_container_width=True):
+                    st.session_state.current_ticker = wt["ticker"]
+                    st.rerun()
+                if show_added_by:
+                    st.caption(f"追加: {wt.get('added_by', '匿名')}")
+            with col_b:
+                if st.button("✕", key=f"{key_prefix}_del_{i}", help="削除"):
+                    wl.pop(i)
+                    save_fn(wl)
+                    st.rerun()
+    else:
+        st.caption("銘柄を追加してください")
 
 
 def _fmt_pct(val) -> str:
@@ -379,51 +420,35 @@ if "watchlist" not in st.session_state:
     ]
 if "current_ticker" not in st.session_state:
     st.session_state.current_ticker = ""
+if "personal_watchlist_owner" not in st.session_state:
+    st.session_state.personal_watchlist_owner = None
+    st.session_state.personal_watchlist = []
 
 # ─── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 📋 共有ウォッチリスト")
-    st.caption("このリストは訪問者全員に共有されます。名前を入れておくと誰が追加したか分かります。")
+    st.markdown("## 📋 ウォッチリスト")
 
     username = st.text_input("あなたの名前", key="username_input", placeholder="例: まひろ")
     username = username.strip() or "匿名"
 
-    new_ticker = st.text_input("銘柄追加（例: 7203 / トヨタ）", key="add_ticker_input",
-                               placeholder="7203 / トヨタ / AAPL")
-    if st.button("追加", use_container_width=True):
-        raw = new_ticker.strip()
-        if raw:
-            with st.spinner("検索中..."):
-                t, _df, wl_info, _resolved = _resolve_stock(raw)
-            if t is None:
-                st.warning(f"「{raw}」が見つかりませんでした。")
-            elif any(w["ticker"] == t for w in st.session_state.watchlist):
-                st.info(f"「{t}」は既に追加されています。")
-            else:
-                wl_name = get_display_name(wl_info, "日本語", t.endswith(".T")) if wl_info else t
-                st.session_state.watchlist.append({
-                    "ticker": t, "name": wl_name or t, "added_by": username,
-                })
-                save_watchlist(st.session_state.watchlist)
-                st.rerun()
+    if username != "匿名" and st.session_state.personal_watchlist_owner != username:
+        st.session_state.personal_watchlist = load_personal_watchlist(username)
+        st.session_state.personal_watchlist_owner = username
 
-    st.divider()
-
-    if st.session_state.watchlist:
-        for i, wt in enumerate(st.session_state.watchlist):
-            col_a, col_b = st.columns([5, 1])
-            with col_a:
-                if st.button(wt["name"], key=f"wl_{i}", use_container_width=True):
-                    st.session_state.current_ticker = wt["ticker"]
-                    st.rerun()
-                st.caption(f"追加: {wt.get('added_by', '匿名')}")
-            with col_b:
-                if st.button("✕", key=f"del_{i}", help="削除"):
-                    st.session_state.watchlist.pop(i)
-                    save_watchlist(st.session_state.watchlist)
-                    st.rerun()
-    else:
-        st.caption("銘柄を追加してください")
+    tab_shared, tab_personal = st.tabs(["🌐 共有", "👤 個人"])
+    with tab_shared:
+        st.caption("訪問者全員に共有されるリストです。")
+        _render_watchlist(st.session_state.watchlist, save_watchlist, "shared", True, username)
+    with tab_personal:
+        if username == "匿名":
+            st.caption("名前を入力すると、自分専用のリストを保存できます（同じ名前で復元されます）。")
+        else:
+            st.caption(f"「{username}」さん専用のリストです。")
+            _render_watchlist(
+                st.session_state.personal_watchlist,
+                lambda wl: save_personal_watchlist(username, wl),
+                "personal", False, username,
+            )
 
     st.divider()
     st.markdown("## ⚙️ 設定")
