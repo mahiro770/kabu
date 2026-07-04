@@ -441,7 +441,7 @@ with st.sidebar:
         _render_watchlist(st.session_state.watchlist, save_watchlist, "shared", True, username)
     with tab_personal:
         if username == "匿名":
-            st.caption("名前を入力すると、自分専用のリストを保存できます（同じ名前で復元されます）。")
+            st.info("⬆️ 上の「あなたの名前」を入力すると、自分専用のリストを追加できるようになります。")
         else:
             st.caption(f"「{username}」さん専用のリストです。")
             _render_watchlist(
