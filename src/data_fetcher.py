@@ -48,14 +48,23 @@ def get_earnings_forecast(ticker: str) -> dict | None:
         return None
 
 
-def get_major_holders(ticker: str) -> pd.DataFrame | None:
-    """機関投資家・大株主の保有比率上位を取得する。"""
+def get_major_holders(ticker: str) -> list[dict] | None:
+    """機関投資家の保有比率上位を取得する（主に米国株向け）。"""
     try:
         stock = yf.Ticker(ticker)
         holders = stock.institutional_holders
         if holders is None or holders.empty:
             return None
-        return holders.sort_values("pctHeld", ascending=False).reset_index(drop=True)
+        holders = holders.sort_values("pctHeld", ascending=False)
+        return [
+            {
+                "name": row.get("Holder"),
+                "pct": row.get("pctHeld"),
+                "shares": row.get("Shares"),
+                "value": row.get("Value"),
+            }
+            for _, row in holders.head(10).iterrows()
+        ]
     except Exception as e:
         print(f"大株主データ取得エラー ({ticker}): {e}")
         return None
