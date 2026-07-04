@@ -197,11 +197,13 @@ def display_financials(
     p5.metric("粗利益率" if ja else "Gross Margin", _fmt_pct(info.get("grossMargins")))
 
     st.markdown("#### 成長性・財務健全性" if ja else "#### Growth & Financial Health")
-    g1, g2, g3, g4, g5, g6, g7 = st.columns(7)
+    g1, g2, g3, g4 = st.columns(4)
     g1.metric("売上成長率" if ja else "Revenue Growth", _fmt_pct(info.get("revenueGrowth")))
     g2.metric("利益成長率" if ja else "Earnings Growth", _fmt_pct(info.get("earningsGrowth")))
     g3.metric("流動比率" if ja else "Current Ratio", _fmt_fin(info.get("currentRatio"), ".2f"))
     g4.metric("D/Eレシオ" if ja else "D/E Ratio", _fmt_fin(info.get("debtToEquity"), ".2f"))
+
+    g5, g6, g7 = st.columns(3)
     div = info.get("dividendYield")
     if div is not None:
         div_str = f"{div:.2f}%" if div > 0.5 else f"{div*100:.2f}%"
