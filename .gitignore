@@ -4,6 +4,11 @@ personal_watchlists.json
 community_watchlists.json
 .env
 
+# GCP service account credentials
+*serviceAccountKey*.json
+firebase-key.json
+*firebase*credentials*.json
+
 # Python cache
 __pycache__/
 *.py[cod]

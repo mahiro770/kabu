@@ -1,10 +1,41 @@
 import hashlib
-import json
 import os
 
-WATCHLIST_FILE = "watchlist.json"
-PERSONAL_WATCHLIST_FILE = "personal_watchlists.json"
-COMMUNITY_WATCHLIST_FILE = "community_watchlists.json"
+from dotenv import load_dotenv
+from google.cloud import firestore
+from google.oauth2 import service_account
+
+load_dotenv()
+
+PUBLIC_COLLECTION = "public_watchlist"
+PUBLIC_DOC_ID = "default"
+PERSONAL_COLLECTION = "personal_watchlists"
+COMMUNITY_COLLECTION = "community_watchlists"
+
+_client = None
+
+
+def _credentials_from_secrets():
+    """Streamlit CloudのSecrets（[firestore_credentials]テーブル）から認証情報を組み立てる。"""
+    try:
+        import streamlit as st
+        return dict(st.secrets["firestore_credentials"])
+    except Exception:
+        return None
+
+
+def _get_client():
+    global _client
+    if _client is None:
+        key_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        if key_path and os.path.exists(key_path):
+            _client = firestore.Client.from_service_account_json(key_path)
+        elif (creds_info := _credentials_from_secrets()) is not None:
+            credentials = service_account.Credentials.from_service_account_info(creds_info)
+            _client = firestore.Client(credentials=credentials, project=creds_info["project_id"])
+        else:
+            _client = firestore.Client()
+    return _client
 
 
 def _hash_passphrase(passphrase: str) -> str:
@@ -13,102 +44,87 @@ def _hash_passphrase(passphrase: str) -> str:
 
 def load_watchlist() -> list:
     """誰でも見られる公開リスト。"""
-    if os.path.exists(WATCHLIST_FILE):
-        with open(WATCHLIST_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+    doc = _get_client().collection(PUBLIC_COLLECTION).document(PUBLIC_DOC_ID).get()
+    return doc.to_dict().get("items", []) if doc.exists else []
 
 
 def save_watchlist(watchlist: list) -> None:
-    with open(WATCHLIST_FILE, "w", encoding="utf-8") as f:
-        json.dump(watchlist, f, ensure_ascii=False, indent=2)
+    _get_client().collection(PUBLIC_COLLECTION).document(PUBLIC_DOC_ID).set({"items": watchlist})
 
 
-def _load_all(file_path: str) -> dict:
-    if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-
-def _save_all(file_path: str, data: dict) -> None:
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-def _get_record(file_path: str, key: str) -> dict | None:
+def _get_record(collection: str, key: str) -> dict | None:
     """keyが既に登録済みなら {"passphrase_hash":.., "items":[..]} を返す。未登録・旧形式ならNone。"""
-    record = _load_all(file_path).get(key)
-    if isinstance(record, dict) and "items" in record:
-        return record
-    return None
+    doc = _get_client().collection(collection).document(key).get()
+    if not doc.exists:
+        return None
+    data = doc.to_dict()
+    return data if isinstance(data, dict) and "items" in data else None
 
 
-def _verify_passphrase(file_path: str, key: str, passphrase: str) -> bool:
-    record = _get_record(file_path, key)
+def _verify_passphrase(collection: str, key: str, passphrase: str) -> bool:
+    record = _get_record(collection, key)
     if record is None:
         return True
     return record.get("passphrase_hash") == _hash_passphrase(passphrase)
 
 
-def _claim_name(file_path: str, key: str, passphrase: str) -> None:
+def _claim_name(collection: str, key: str, passphrase: str) -> None:
     """未登録（または旧形式）のkeyを合言葉付きで新規登録する。"""
-    data = _load_all(file_path)
-    if _get_record(file_path, key) is None:
-        data[key] = {"passphrase_hash": _hash_passphrase(passphrase), "items": []}
-        _save_all(file_path, data)
+    if _get_record(collection, key) is None:
+        _get_client().collection(collection).document(key).set(
+            {"passphrase_hash": _hash_passphrase(passphrase), "items": []}
+        )
 
 
-def _load_items(file_path: str, key: str) -> list:
-    record = _get_record(file_path, key)
+def _load_items(collection: str, key: str) -> list:
+    record = _get_record(collection, key)
     return record["items"] if record else []
 
 
-def _save_items(file_path: str, key: str, items: list) -> None:
-    data = _load_all(file_path)
-    existing = data.get(key)
-    passphrase_hash = existing.get("passphrase_hash") if isinstance(existing, dict) else None
-    data[key] = {"passphrase_hash": passphrase_hash, "items": items}
-    _save_all(file_path, data)
+def _save_items(collection: str, key: str, items: list) -> None:
+    doc_ref = _get_client().collection(collection).document(key)
+    existing = doc_ref.get()
+    passphrase_hash = existing.to_dict().get("passphrase_hash") if existing.exists else None
+    doc_ref.set({"passphrase_hash": passphrase_hash, "items": items})
 
 
 # ─── 個人リスト（名前 + 合言葉ごと） ──────────────────────────────────────────
 def get_personal_record(username: str) -> dict | None:
-    return _get_record(PERSONAL_WATCHLIST_FILE, username)
+    return _get_record(PERSONAL_COLLECTION, username)
 
 
 def verify_personal_passphrase(username: str, passphrase: str) -> bool:
-    return _verify_passphrase(PERSONAL_WATCHLIST_FILE, username, passphrase)
+    return _verify_passphrase(PERSONAL_COLLECTION, username, passphrase)
 
 
 def claim_personal_name(username: str, passphrase: str) -> None:
-    _claim_name(PERSONAL_WATCHLIST_FILE, username, passphrase)
+    _claim_name(PERSONAL_COLLECTION, username, passphrase)
 
 
 def load_personal_watchlist(username: str) -> list:
-    return _load_items(PERSONAL_WATCHLIST_FILE, username)
+    return _load_items(PERSONAL_COLLECTION, username)
 
 
 def save_personal_watchlist(username: str, watchlist: list) -> None:
-    _save_items(PERSONAL_WATCHLIST_FILE, username, watchlist)
+    _save_items(PERSONAL_COLLECTION, username, watchlist)
 
 
 # ─── コミュニティリスト（コミュニティ名 + 合言葉ごと） ────────────────────────
 def get_community_record(name: str) -> dict | None:
-    return _get_record(COMMUNITY_WATCHLIST_FILE, name)
+    return _get_record(COMMUNITY_COLLECTION, name)
 
 
 def verify_community_passphrase(name: str, passphrase: str) -> bool:
-    return _verify_passphrase(COMMUNITY_WATCHLIST_FILE, name, passphrase)
+    return _verify_passphrase(COMMUNITY_COLLECTION, name, passphrase)
 
 
 def claim_community_name(name: str, passphrase: str) -> None:
-    _claim_name(COMMUNITY_WATCHLIST_FILE, name, passphrase)
+    _claim_name(COMMUNITY_COLLECTION, name, passphrase)
 
 
 def load_community_watchlist(name: str) -> list:
-    return _load_items(COMMUNITY_WATCHLIST_FILE, name)
+    return _load_items(COMMUNITY_COLLECTION, name)
 
 
 def save_community_watchlist(name: str, watchlist: list) -> None:
-    _save_items(COMMUNITY_WATCHLIST_FILE, name, watchlist)
+    _save_items(COMMUNITY_COLLECTION, name, watchlist)
