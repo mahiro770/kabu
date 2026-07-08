@@ -60,7 +60,7 @@ def _get_watchlist_quote(ticker: str, period: str, interval: str) -> dict | None
     return {"close": close, "current": current, "change": change, "change_pct": change_pct}
 
 
-UNGROUPED_LABEL = "未分類"
+OTHER_LABEL = "その他"
 
 
 def _render_item(wt: dict, wl: list, i: int, save_fn, key_prefix: str) -> None:
@@ -99,7 +99,7 @@ def _render_item(wt: dict, wl: list, i: int, save_fn, key_prefix: str) -> None:
         )
     with col_group:
         group_val = st.text_input(
-            "グループ", value=wt.get("group", ""), key=f"{key_prefix}_group_{i}",
+            "フォルダ", value=wt.get("group", ""), key=f"{key_prefix}_group_{i}",
             placeholder="例: 自動車産業",
         )
     with col_save:
@@ -109,6 +109,7 @@ def _render_item(wt: dict, wl: list, i: int, save_fn, key_prefix: str) -> None:
             wt["group"] = group_val.strip()
             save_fn(wl)
             st.toast("保存しました")
+            st.rerun()
 
     st.divider()
 
@@ -120,17 +121,24 @@ def _render_dashboard(wl: list, save_fn, key_prefix: str) -> None:
 
     groups: dict[str, list[tuple[int, dict]]] = {}
     for i, wt in enumerate(wl):
-        group_name = (wt.get("group") or "").strip() or UNGROUPED_LABEL
+        group_name = (wt.get("group") or "").strip() or OTHER_LABEL
         groups.setdefault(group_name, []).append((i, wt))
 
-    group_names = sorted(g for g in groups if g != UNGROUPED_LABEL)
-    if UNGROUPED_LABEL in groups:
-        group_names.append(UNGROUPED_LABEL)
+    group_names = sorted(g for g in groups if g != OTHER_LABEL)
+    if OTHER_LABEL in groups:
+        group_names.append(OTHER_LABEL)
 
-    for group_name in group_names:
-        st.markdown(f"#### 📁 {group_name}")
-        for i, wt in groups[group_name]:
-            _render_item(wt, wl, i, save_fn, key_prefix)
+    folder_key = f"{key_prefix}_folder_select"
+    if folder_key in st.session_state and st.session_state[folder_key] not in group_names:
+        del st.session_state[folder_key]
+
+    selected_group = st.radio(
+        "フォルダを選択", group_names, key=folder_key, horizontal=True,
+        format_func=lambda g: f"📁 {g}",
+    )
+
+    for i, wt in groups[selected_group]:
+        _render_item(wt, wl, i, save_fn, key_prefix)
 
 
 tab_public, tab_community, tab_personal = st.tabs(["🌐 公開", "🏘️ コミュニティ", "👤 個人"])
