@@ -107,8 +107,12 @@ h3, h4 { color: #e5e7eb; }
     border-color: rgba(139, 92, 246, 0.45) !important;
 }
 
-/* Radio groups styled as pill chips (period / folder selectors) */
-[data-testid="stRadio"] label[data-baseweb="radio"] {
+/* Radio groups styled as pill chips (period / folder selectors).
+   Streamlit has changed the internal radio-option markup across versions
+   (BaseWeb "label[data-baseweb=radio]" in older releases, the "stRadioOption"
+   testid in newer ones) — both selectors are kept so this works either way. */
+[data-testid="stRadio"] label[data-baseweb="radio"],
+[data-testid="stRadioOption"] {
     background: rgba(139, 92, 246, 0.06);
     border: 1px solid rgba(139, 92, 246, 0.2);
     border-radius: 999px;
@@ -116,12 +120,14 @@ h3, h4 { color: #e5e7eb; }
     margin-right: 0.3rem;
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
-[data-testid="stRadio"] label[data-baseweb="radio"]:hover {
+[data-testid="stRadio"] label[data-baseweb="radio"]:hover,
+[data-testid="stRadioOption"]:hover {
     background: rgba(139, 92, 246, 0.16);
     border-color: rgba(139, 92, 246, 0.55);
     transform: translateY(-1px);
 }
-[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {
+[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked),
+[data-testid="stRadioOption"][data-selected="true"] {
     background: linear-gradient(90deg, rgba(139, 92, 246, 0.25), rgba(34, 211, 238, 0.18));
     border-color: rgba(34, 211, 238, 0.6);
 }
