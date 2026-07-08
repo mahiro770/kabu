@@ -9,54 +9,54 @@ html, body, [class*="css"] {
 }
 
 .stApp {
-    background: radial-gradient(circle at 15% -10%, #1b2140 0%, #0b0f19 45%) fixed;
+    background: radial-gradient(circle at 15% -10%, #1a2130 0%, #0a0d15 45%) fixed;
 }
 
 .block-container { padding-top: 1.5rem; }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
-    background: #10141f;
-    border-right: 1px solid rgba(139, 92, 246, 0.15);
+    background: #0e131c;
+    border-right: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 /* Headings */
 h1 {
     font-weight: 700;
-    background: linear-gradient(90deg, #a78bfa, #22d3ee);
+    background: linear-gradient(90deg, #8fb4b0, #c7d1d9);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     width: fit-content;
 }
-h3, h4 { color: #e5e7eb; }
+h3, h4 { color: #d8dde3; }
 
 /* Metric cards */
 [data-testid="stMetric"] {
-    background: linear-gradient(160deg, #171d30, #10131f);
-    border: 1px solid rgba(139, 92, 246, 0.18);
+    background: linear-gradient(160deg, #161c26, #0f131b);
+    border: 1px solid rgba(148, 163, 184, 0.16);
     border-radius: 12px;
     padding: 0.9rem 1.1rem;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 [data-testid="stMetric"]:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-    border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    border-color: rgba(111, 165, 168, 0.4);
 }
 [data-testid="stMetricLabel"] { color: #9ca3af; }
-[data-testid="stMetricValue"] { color: #f3f4f6; }
+[data-testid="stMetricValue"] { color: #e5e9ed; }
 
 /* Primary buttons */
 [data-testid="stBaseButton-primary"] {
-    background: linear-gradient(90deg, #8b5cf6, #6366f1);
+    background: linear-gradient(90deg, #3d6b70, #2c4d52);
     border: none;
-    box-shadow: 0 0 0 rgba(139, 92, 246, 0);
+    box-shadow: 0 0 0 rgba(111, 165, 168, 0);
     transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 [data-testid="stBaseButton-primary"]:hover {
-    box-shadow: 0 0 18px rgba(139, 92, 246, 0.55);
+    box-shadow: 0 0 14px rgba(111, 165, 168, 0.4);
     transform: translateY(-1px);
 }
 
@@ -65,8 +65,8 @@ h3, h4 { color: #e5e7eb; }
     transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 [data-testid="stBaseButton-secondary"]:hover {
-    border-color: rgba(34, 211, 238, 0.6);
-    box-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
+    border-color: rgba(111, 165, 168, 0.55);
+    box-shadow: 0 0 10px rgba(111, 165, 168, 0.2);
     transform: translateY(-1px);
 }
 
@@ -75,11 +75,11 @@ h3, h4 { color: #e5e7eb; }
     transition: color 0.15s ease, border-color 0.15s ease;
 }
 [data-testid="stTabs"] button[aria-selected="true"] {
-    color: #22d3ee !important;
-    border-bottom-color: #22d3ee !important;
+    color: #8fb4b0 !important;
+    border-bottom-color: #8fb4b0 !important;
 }
 [data-testid="stTabs"] button[aria-selected="false"]:hover {
-    color: #a78bfa !important;
+    color: #a9b6bd !important;
 }
 
 /* Expander */
@@ -89,7 +89,7 @@ h3, h4 { color: #e5e7eb; }
     transition: border-color 0.15s ease;
 }
 [data-testid="stExpander"]:hover {
-    border-color: rgba(139, 92, 246, 0.3);
+    border-color: rgba(111, 165, 168, 0.3);
 }
 
 /* Bordered containers used as cards (e.g. watchlist rows).
@@ -98,13 +98,13 @@ h3, h4 { color: #e5e7eb; }
 [class*="st-key-wlcard_"] {
     border-radius: 14px !important;
     margin-bottom: 0.9rem;
-    background: linear-gradient(160deg, rgba(23, 29, 48, 0.6), rgba(16, 19, 31, 0.6)) !important;
+    background: linear-gradient(160deg, rgba(22, 28, 38, 0.6), rgba(15, 19, 27, 0.6)) !important;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 [class*="st-key-wlcard_"]:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
-    border-color: rgba(139, 92, 246, 0.45) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    border-color: rgba(111, 165, 168, 0.4) !important;
 }
 
 /* Radio groups styled as pill chips (period / folder selectors).
@@ -113,8 +113,8 @@ h3, h4 { color: #e5e7eb; }
    testid in newer ones) — both selectors are kept so this works either way. */
 [data-testid="stRadio"] label[data-baseweb="radio"],
 [data-testid="stRadioOption"] {
-    background: rgba(139, 92, 246, 0.06);
-    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: rgba(111, 165, 168, 0.06);
+    border: 1px solid rgba(148, 163, 184, 0.18);
     border-radius: 999px;
     padding: 0.25rem 0.9rem;
     margin-right: 0.3rem;
@@ -122,14 +122,14 @@ h3, h4 { color: #e5e7eb; }
 }
 [data-testid="stRadio"] label[data-baseweb="radio"]:hover,
 [data-testid="stRadioOption"]:hover {
-    background: rgba(139, 92, 246, 0.16);
-    border-color: rgba(139, 92, 246, 0.55);
+    background: rgba(111, 165, 168, 0.14);
+    border-color: rgba(111, 165, 168, 0.5);
     transform: translateY(-1px);
 }
 [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked),
 [data-testid="stRadioOption"][data-selected="true"] {
-    background: linear-gradient(90deg, rgba(139, 92, 246, 0.25), rgba(34, 211, 238, 0.18));
-    border-color: rgba(34, 211, 238, 0.6);
+    background: linear-gradient(90deg, rgba(111, 165, 168, 0.22), rgba(148, 163, 184, 0.14));
+    border-color: rgba(111, 165, 168, 0.55);
 }
 
 /* Text inputs / text areas */
@@ -137,8 +137,8 @@ h3, h4 { color: #e5e7eb; }
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 [data-testid="stTextInput"] input:focus, [data-testid="stTextArea"] textarea:focus {
-    border-color: rgba(34, 211, 238, 0.6) !important;
-    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.3);
+    border-color: rgba(111, 165, 168, 0.55) !important;
+    box-shadow: 0 0 0 1px rgba(111, 165, 168, 0.28);
 }
 
 hr { border-color: rgba(255, 255, 255, 0.08); }
@@ -151,14 +151,14 @@ hr { border-color: rgba(255, 255, 255, 0.08); }
     font-weight: 700;
     font-size: 0.95rem;
 }
-.signal-buy { color: #34d399; background: rgba(52, 211, 153, 0.12); }
-.signal-sell { color: #f87171; background: rgba(248, 113, 113, 0.12); }
-.signal-neutral { color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+.signal-buy { color: #7fb69c; background: rgba(127, 182, 156, 0.12); }
+.signal-sell { color: #c98f89; background: rgba(201, 143, 137, 0.12); }
+.signal-neutral { color: #c9a76d; background: rgba(201, 167, 109, 0.12); }
 
 .fin-label { font-size: 0.8rem; color: #9ca3af; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.4); border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(111, 165, 168, 0.35); border-radius: 8px; }
 </style>
 """
 

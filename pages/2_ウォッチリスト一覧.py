@@ -85,7 +85,7 @@ def _render_item(wt: dict, wl: list, i: int, save_fn, key_prefix: str) -> None:
                     f"{quote['change']:+,.0f} ({quote['change_pct']:+.2f}%)",
                 )
             with col_chart:
-                color = "#34d399" if quote["change"] >= 0 else "#f87171"
+                color = "#7fb69c" if quote["change"] >= 0 else "#c98f89"
                 fig = build_watchlist_line_chart(quote["close"], color, is_intraday)
                 st.plotly_chart(
                     fig, width="stretch", config={"displayModeBar": False},
