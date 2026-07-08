@@ -2,10 +2,10 @@ import yfinance as yf
 import pandas as pd
 
 
-def get_stock_data(ticker: str, period: str = "1y") -> pd.DataFrame | None:
+def get_stock_data(ticker: str, period: str = "1y", interval: str = "1d") -> pd.DataFrame | None:
     try:
         stock = yf.Ticker(ticker)
-        df = stock.history(period=period)
+        df = stock.history(period=period, interval=interval)
         if df is None or df.empty:
             return None
         df.columns = [c.lower() for c in df.columns]

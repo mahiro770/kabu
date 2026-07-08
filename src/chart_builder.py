@@ -43,27 +43,27 @@ def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame) -> None:
     )
 
 
-def build_sparkline(close: pd.Series, color: str) -> go.Figure:
-    """ウォッチリスト一覧用の軸なし小型チャート。期間開始値に水平線、末尾に現在値ラベルを表示する。"""
-    x = list(range(len(close)))
+def build_watchlist_line_chart(close: pd.Series, color: str, intraday: bool = False) -> go.Figure:
+    """ウォッチリスト一覧用の軸・日付ラベル付き価格チャート。"""
+    tick_fmt = "%H:%M" if intraday else "%m/%d"
     fig = go.Figure(go.Scatter(
-        x=x, y=close.values, mode="lines", line=dict(color=color, width=1.5),
-        hovertemplate="%{y:,.1f}<extra></extra>",
+        x=close.index, y=close.values, mode="lines", line=dict(color=color, width=1.5),
+        hovertemplate=f"%{{x|%Y/%m/%d {'%H:%M' if intraday else ''}}}<br>%{{y:,.1f}}<extra></extra>",
     ))
-    fig.add_hline(y=close.iloc[0], line_width=1, line_dash="dot", line_color="rgba(255,255,255,0.35)")
-    fig.add_annotation(
-        x=x[-1], y=close.iloc[-1], text=f"{close.iloc[-1]:,.1f}",
-        showarrow=False, xanchor="left", xshift=6,
-        font=dict(size=11, color=color),
-    )
     fig.update_layout(
-        margin=dict(l=0, r=44, t=4, b=4),
-        height=50,
+        margin=dict(l=4, r=48, t=8, b=24),
+        height=160,
         showlegend=False,
-        xaxis=dict(visible=False, fixedrange=True),
-        yaxis=dict(visible=False, fixedrange=True),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(
+            showgrid=False, tickformat=tick_fmt, nticks=5,
+            tickfont=dict(size=10, color="#9ca3af"), fixedrange=True,
+        ),
+        yaxis=dict(
+            side="right", showgrid=True, gridcolor="rgba(255,255,255,0.08)", griddash="dash",
+            tickfont=dict(size=10, color="#9ca3af"), fixedrange=True,
+        ),
     )
     return fig
 

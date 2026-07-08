@@ -1,7 +1,7 @@
 import streamlit as st
 
 from src.data_fetcher import get_stock_data
-from src.chart_builder import build_sparkline
+from src.chart_builder import build_watchlist_line_chart
 from src.watchlist import (
     load_watchlist, save_watchlist,
     save_personal_watchlist, save_community_watchlist,
@@ -17,6 +17,18 @@ inject_theme()
 
 st.markdown("# 📋 ウォッチリスト一覧")
 st.caption("登録銘柄の現在値・値動き・メモをまとめて確認できます")
+
+PERIOD_OPTIONS = {
+    "1日": ("1d", "5m"),
+    "1週": ("5d", "30m"),
+    "1カ月": ("1mo", "1d"),
+    "6カ月": ("6mo", "1d"),
+    "1年": ("1y", "1d"),
+    "2年": ("2y", "1d"),
+}
+period_label = st.radio("期間", list(PERIOD_OPTIONS.keys()), index=2, horizontal=True)
+period, interval = PERIOD_OPTIONS[period_label]
+is_intraday = period_label in ("1日", "1週")
 
 if "watchlist" not in st.session_state:
     st.session_state.watchlist = [
@@ -34,8 +46,8 @@ if "community_watchlist_owner" not in st.session_state:
 
 
 @st.cache_data(show_spinner=False, ttl=300)
-def _get_watchlist_quote(ticker: str) -> dict | None:
-    df = get_stock_data(ticker, "1mo")
+def _get_watchlist_quote(ticker: str, period: str, interval: str) -> dict | None:
+    df = get_stock_data(ticker, period, interval)
     if df is None or df.empty:
         return None
     close = df["close"].dropna()
@@ -55,8 +67,8 @@ def _render_dashboard(wl: list, save_fn, key_prefix: str) -> None:
 
     for i, wt in enumerate(wl):
         ticker = wt["ticker"]
-        quote = _get_watchlist_quote(ticker)
-        col_name, col_price, col_chart = st.columns([2, 2, 3])
+        quote = _get_watchlist_quote(ticker, period, interval)
+        col_name, col_price, col_chart = st.columns([2, 2, 4])
         with col_name:
             if st.button(wt["name"], key=f"{key_prefix}_sel_{i}", use_container_width=True):
                 st.session_state.current_ticker = ticker
@@ -75,7 +87,7 @@ def _render_dashboard(wl: list, save_fn, key_prefix: str) -> None:
                 )
             with col_chart:
                 color = "#34d399" if quote["change"] >= 0 else "#f87171"
-                fig = build_sparkline(quote["close"], color)
+                fig = build_watchlist_line_chart(quote["close"], color, is_intraday)
                 st.plotly_chart(
                     fig, width="stretch", config={"displayModeBar": False},
                     key=f"{key_prefix}_spark_{i}",
