@@ -64,54 +64,53 @@ OTHER_LABEL = "その他"
 
 
 def _render_item(wt: dict, wl: list, i: int, save_fn, key_prefix: str) -> None:
-    ticker = wt["ticker"]
-    quote = _get_watchlist_quote(ticker, period, interval)
-    col_name, col_price, col_chart = st.columns([2, 2, 4])
-    with col_name:
-        if st.button(wt["name"], key=f"{key_prefix}_sel_{i}", use_container_width=True):
-            st.session_state.current_ticker = ticker
-            st.switch_page("app.py")
-        st.caption(ticker)
-    if quote is None:
-        col_price.caption("データ取得失敗")
-        col_chart.caption("—")
-    else:
-        currency = "JPY" if ticker.endswith(".T") else "USD"
-        with col_price:
-            st.metric(
-                "現在値",
-                f"{quote['current']:,.0f} {currency}",
-                f"{quote['change']:+,.0f} ({quote['change_pct']:+.2f}%)",
-            )
-        with col_chart:
-            color = "#34d399" if quote["change"] >= 0 else "#f87171"
-            fig = build_watchlist_line_chart(quote["close"], color, is_intraday)
-            st.plotly_chart(
-                fig, width="stretch", config={"displayModeBar": False},
-                key=f"{key_prefix}_spark_{i}",
-            )
+    with st.container(border=True, key=f"wlcard_{key_prefix}_{i}"):
+        ticker = wt["ticker"]
+        quote = _get_watchlist_quote(ticker, period, interval)
+        col_name, col_price, col_chart = st.columns([2, 2, 4])
+        with col_name:
+            if st.button(wt["name"], key=f"{key_prefix}_sel_{i}", use_container_width=True):
+                st.session_state.current_ticker = ticker
+                st.switch_page("app.py")
+            st.caption(ticker)
+        if quote is None:
+            col_price.caption("データ取得失敗")
+            col_chart.caption("—")
+        else:
+            currency = "JPY" if ticker.endswith(".T") else "USD"
+            with col_price:
+                st.metric(
+                    "現在値",
+                    f"{quote['current']:,.0f} {currency}",
+                    f"{quote['change']:+,.0f} ({quote['change_pct']:+.2f}%)",
+                )
+            with col_chart:
+                color = "#34d399" if quote["change"] >= 0 else "#f87171"
+                fig = build_watchlist_line_chart(quote["close"], color, is_intraday)
+                st.plotly_chart(
+                    fig, width="stretch", config={"displayModeBar": False},
+                    key=f"{key_prefix}_spark_{i}",
+                )
 
-    col_memo, col_group, col_save = st.columns([4, 2, 1])
-    with col_memo:
-        memo_val = st.text_area(
-            "メモ", value=wt.get("memo", ""), key=f"{key_prefix}_memo_{i}",
-            height=68, placeholder="メモを入力（例: 決算待ち、押し目待ちなど）",
-        )
-    with col_group:
-        group_val = st.text_input(
-            "フォルダ", value=wt.get("group", ""), key=f"{key_prefix}_group_{i}",
-            placeholder="例: 自動車産業",
-        )
-    with col_save:
-        st.markdown("<div style='height: 1.9rem'></div>", unsafe_allow_html=True)
-        if save_fn is not None and st.button("保存", key=f"{key_prefix}_save_{i}", use_container_width=True):
-            wt["memo"] = memo_val
-            wt["group"] = group_val.strip()
-            save_fn(wl)
-            st.toast("保存しました")
-            st.rerun()
-
-    st.divider()
+        col_memo, col_group, col_save = st.columns([4, 2, 1])
+        with col_memo:
+            memo_val = st.text_area(
+                "メモ", value=wt.get("memo", ""), key=f"{key_prefix}_memo_{i}",
+                height=68, placeholder="メモを入力（例: 決算待ち、押し目待ちなど）",
+            )
+        with col_group:
+            group_val = st.text_input(
+                "フォルダ", value=wt.get("group", ""), key=f"{key_prefix}_group_{i}",
+                placeholder="例: 自動車産業",
+            )
+        with col_save:
+            st.markdown("<div style='height: 1.9rem'></div>", unsafe_allow_html=True)
+            if save_fn is not None and st.button("保存", key=f"{key_prefix}_save_{i}", use_container_width=True):
+                wt["memo"] = memo_val
+                wt["group"] = group_val.strip()
+                save_fn(wl)
+                st.toast("保存しました")
+                st.rerun()
 
 
 def _render_dashboard(wl: list, save_fn, key_prefix: str) -> None:
