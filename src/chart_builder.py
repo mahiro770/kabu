@@ -43,6 +43,21 @@ def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame) -> None:
     )
 
 
+def build_sparkline(close: pd.Series, color: str) -> go.Figure:
+    """ウォッチリスト一覧用の軸なし小型チャート。"""
+    fig = go.Figure(go.Scatter(y=close.values, mode="lines", line=dict(color=color, width=1.5)))
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=4, b=4),
+        height=50,
+        showlegend=False,
+        xaxis=dict(visible=False, fixedrange=True),
+        yaxis=dict(visible=False, fixedrange=True),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+    )
+    return fig
+
+
 def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure:
     fig = make_subplots(
         rows=2, cols=1,

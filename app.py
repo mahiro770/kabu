@@ -14,14 +14,14 @@ from src.stock_search import search_stock
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
 from src.chart_builder import (
     build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart,
-    build_adx_chart, build_obv_chart,
+    build_adx_chart, build_obv_chart, build_sparkline,
 )
 from src.ai_analyst import analyze_stock_stream, list_model_choices
 from src.watchlist import (
     load_watchlist, save_watchlist, load_personal_watchlist, save_personal_watchlist,
-    get_personal_record, verify_personal_passphrase, claim_personal_name,
+    get_personal_record, verify_personal_passphrase, claim_personal_name, reset_personal_passphrase,
     load_community_watchlist, save_community_watchlist,
-    get_community_record, verify_community_passphrase, claim_community_name,
+    get_community_record, verify_community_passphrase, claim_community_name, reset_community_passphrase,
 )
 from src.ui import inject_theme
 
@@ -219,9 +219,72 @@ def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, u
         st.caption("銘柄を追加してください")
 
 
+@st.cache_data(show_spinner=False, ttl=300)
+def _get_watchlist_quote(ticker: str) -> dict | None:
+    df = get_stock_data(ticker, "1mo")
+    if df is None or df.empty:
+        return None
+    close = df["close"].dropna()
+    if close.empty:
+        return None
+    current = close.iloc[-1]
+    prev = close.iloc[-2] if len(close) > 1 else current
+    change = current - prev
+    change_pct = (change / prev * 100) if prev else 0.0
+    return {"close": close, "current": current, "change": change, "change_pct": change_pct}
+
+
+def _render_watchlist_dashboard(wl: list, key_prefix: str, lang: str) -> None:
+    ja = lang == "日本語"
+    if not wl:
+        st.caption("銘柄が登録されていません。" if ja else "No stocks added yet.")
+        return
+
+    for i, wt in enumerate(wl):
+        ticker = wt["ticker"]
+        quote = _get_watchlist_quote(ticker)
+        col_name, col_price, col_chart = st.columns([2, 2, 3])
+        with col_name:
+            if st.button(wt["name"], key=f"{key_prefix}_dash_sel_{i}", use_container_width=True):
+                st.session_state.current_ticker = ticker
+                st.rerun()
+            st.caption(ticker)
+        if quote is None:
+            col_price.caption("データ取得失敗" if ja else "Failed to fetch data")
+            col_chart.caption("—")
+        else:
+            currency = "JPY" if ticker.endswith(".T") else "USD"
+            with col_price:
+                st.metric(
+                    "現在値" if ja else "Price",
+                    f"{quote['current']:,.0f} {currency}",
+                    f"{quote['change']:+,.0f} ({quote['change_pct']:+.2f}%)",
+                )
+            with col_chart:
+                color = "#34d399" if quote["change"] >= 0 else "#f87171"
+                fig = build_sparkline(quote["close"], color)
+                st.plotly_chart(
+                    fig, width="stretch", config={"displayModeBar": False},
+                    key=f"{key_prefix}_spark_{i}",
+                )
+        st.divider()
+
+
+def _render_passphrase_reset(name: str, reset_fn, key_prefix: str) -> None:
+    with st.expander("🔑 合言葉を忘れた場合はこちら"):
+        st.caption("名前を指定できれば誰でも合言葉を再設定できます（保存済みの銘柄は消えません）。")
+        new_pw = st.text_input("新しい合言葉", type="password", key=f"{key_prefix}_reset_pw_input")
+        if st.button("再設定する", key=f"{key_prefix}_reset_btn"):
+            if new_pw:
+                reset_fn(name, new_pw)
+                st.success("合言葉を再設定しました。上の欄に新しい合言葉を入力してください。")
+            else:
+                st.warning("新しい合言葉を入力してください。")
+
+
 def _render_gated_list(
     owner_key: str, items_key: str, name: str,
-    get_record_fn, verify_fn, claim_fn, load_fn, save_fn,
+    get_record_fn, verify_fn, claim_fn, load_fn, save_fn, reset_fn,
     key_prefix: str, show_added_by: bool, username: str,
     new_name_msg: str, need_passphrase_msg: str, wrong_passphrase_msg: str,
 ) -> None:
@@ -241,9 +304,11 @@ def _render_gated_list(
             st.session_state[owner_key] = name
     elif not passphrase:
         st.warning(need_passphrase_msg)
+        _render_passphrase_reset(name, reset_fn, key_prefix)
         return
     elif not verify_fn(name, passphrase):
         st.error(wrong_passphrase_msg)
+        _render_passphrase_reset(name, reset_fn, key_prefix)
         return
     else:
         if st.session_state[owner_key] != name:
@@ -508,7 +573,7 @@ with st.sidebar:
             _render_gated_list(
                 "community_watchlist_owner", "community_watchlist", community_name,
                 get_community_record, verify_community_passphrase, claim_community_name,
-                load_community_watchlist, save_community_watchlist,
+                load_community_watchlist, save_community_watchlist, reset_community_passphrase,
                 "community", True, username,
                 "🆕 新しいコミュニティ名です。合言葉を決めて入力するとメンバーで共有できます。",
                 "🔒 合言葉を入力してください。",
@@ -521,7 +586,7 @@ with st.sidebar:
             _render_gated_list(
                 "personal_watchlist_owner", "personal_watchlist", username,
                 get_personal_record, verify_personal_passphrase, claim_personal_name,
-                load_personal_watchlist, save_personal_watchlist,
+                load_personal_watchlist, save_personal_watchlist, reset_personal_passphrase,
                 "personal", False, username,
                 "🆕 初めてのお名前です。合言葉を決めて入力すると個人リストが使えます。",
                 "🔒 合言葉を入力してください。",
@@ -727,6 +792,15 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
                         placeholder.markdown(full_text)
 
 else:
+    st.markdown("## 📋 ウォッチリスト一覧" if lang == "日本語" else "## 📋 Watchlist")
+    tab_dash_public, tab_dash_community, tab_dash_personal = st.tabs(["🌐 公開", "🏘️ コミュニティ", "👤 個人"])
+    with tab_dash_public:
+        _render_watchlist_dashboard(st.session_state.watchlist, "dash_public", lang)
+    with tab_dash_community:
+        _render_watchlist_dashboard(st.session_state.community_watchlist, "dash_community", lang)
+    with tab_dash_personal:
+        _render_watchlist_dashboard(st.session_state.personal_watchlist, "dash_personal", lang)
+
     st.markdown("""
 ---
 ### 使い方

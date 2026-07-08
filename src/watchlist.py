@@ -76,6 +76,14 @@ def _claim_name(collection: str, key: str, passphrase: str) -> None:
         )
 
 
+def _reset_passphrase(collection: str, key: str, new_passphrase: str) -> None:
+    """既存のitemsを保持したまま合言葉だけを再設定する。"""
+    doc_ref = _get_client().collection(collection).document(key)
+    existing = doc_ref.get()
+    items = existing.to_dict().get("items", []) if existing.exists else []
+    doc_ref.set({"passphrase_hash": _hash_passphrase(new_passphrase), "items": items})
+
+
 def _load_items(collection: str, key: str) -> list:
     record = _get_record(collection, key)
     return record["items"] if record else []
@@ -101,6 +109,10 @@ def claim_personal_name(username: str, passphrase: str) -> None:
     _claim_name(PERSONAL_COLLECTION, username, passphrase)
 
 
+def reset_personal_passphrase(username: str, new_passphrase: str) -> None:
+    _reset_passphrase(PERSONAL_COLLECTION, username, new_passphrase)
+
+
 def load_personal_watchlist(username: str) -> list:
     return _load_items(PERSONAL_COLLECTION, username)
 
@@ -120,6 +132,10 @@ def verify_community_passphrase(name: str, passphrase: str) -> bool:
 
 def claim_community_name(name: str, passphrase: str) -> None:
     _claim_name(COMMUNITY_COLLECTION, name, passphrase)
+
+
+def reset_community_passphrase(name: str, new_passphrase: str) -> None:
+    _reset_passphrase(COMMUNITY_COLLECTION, name, new_passphrase)
 
 
 def load_community_watchlist(name: str) -> list:
