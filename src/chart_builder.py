@@ -44,10 +44,20 @@ def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame) -> None:
 
 
 def build_sparkline(close: pd.Series, color: str) -> go.Figure:
-    """ウォッチリスト一覧用の軸なし小型チャート。"""
-    fig = go.Figure(go.Scatter(y=close.values, mode="lines", line=dict(color=color, width=1.5)))
+    """ウォッチリスト一覧用の軸なし小型チャート。期間開始値に水平線、末尾に現在値ラベルを表示する。"""
+    x = list(range(len(close)))
+    fig = go.Figure(go.Scatter(
+        x=x, y=close.values, mode="lines", line=dict(color=color, width=1.5),
+        hovertemplate="%{y:,.1f}<extra></extra>",
+    ))
+    fig.add_hline(y=close.iloc[0], line_width=1, line_dash="dot", line_color="rgba(255,255,255,0.35)")
+    fig.add_annotation(
+        x=x[-1], y=close.iloc[-1], text=f"{close.iloc[-1]:,.1f}",
+        showarrow=False, xanchor="left", xshift=6,
+        font=dict(size=11, color=color),
+    )
     fig.update_layout(
-        margin=dict(l=0, r=0, t=4, b=4),
+        margin=dict(l=0, r=44, t=4, b=4),
         height=50,
         showlegend=False,
         xaxis=dict(visible=False, fixedrange=True),

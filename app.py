@@ -14,7 +14,7 @@ from src.stock_search import search_stock
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
 from src.chart_builder import (
     build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart,
-    build_adx_chart, build_obv_chart, build_sparkline,
+    build_adx_chart, build_obv_chart,
 )
 from src.ai_analyst import analyze_stock_stream, list_model_choices
 from src.watchlist import (
@@ -217,57 +217,6 @@ def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, u
                     st.rerun()
     else:
         st.caption("銘柄を追加してください")
-
-
-@st.cache_data(show_spinner=False, ttl=300)
-def _get_watchlist_quote(ticker: str) -> dict | None:
-    df = get_stock_data(ticker, "1mo")
-    if df is None or df.empty:
-        return None
-    close = df["close"].dropna()
-    if close.empty:
-        return None
-    current = close.iloc[-1]
-    prev = close.iloc[-2] if len(close) > 1 else current
-    change = current - prev
-    change_pct = (change / prev * 100) if prev else 0.0
-    return {"close": close, "current": current, "change": change, "change_pct": change_pct}
-
-
-def _render_watchlist_dashboard(wl: list, key_prefix: str, lang: str) -> None:
-    ja = lang == "日本語"
-    if not wl:
-        st.caption("銘柄が登録されていません。" if ja else "No stocks added yet.")
-        return
-
-    for i, wt in enumerate(wl):
-        ticker = wt["ticker"]
-        quote = _get_watchlist_quote(ticker)
-        col_name, col_price, col_chart = st.columns([2, 2, 3])
-        with col_name:
-            if st.button(wt["name"], key=f"{key_prefix}_dash_sel_{i}", use_container_width=True):
-                st.session_state.current_ticker = ticker
-                st.rerun()
-            st.caption(ticker)
-        if quote is None:
-            col_price.caption("データ取得失敗" if ja else "Failed to fetch data")
-            col_chart.caption("—")
-        else:
-            currency = "JPY" if ticker.endswith(".T") else "USD"
-            with col_price:
-                st.metric(
-                    "現在値" if ja else "Price",
-                    f"{quote['current']:,.0f} {currency}",
-                    f"{quote['change']:+,.0f} ({quote['change_pct']:+.2f}%)",
-                )
-            with col_chart:
-                color = "#34d399" if quote["change"] >= 0 else "#f87171"
-                fig = build_sparkline(quote["close"], color)
-                st.plotly_chart(
-                    fig, width="stretch", config={"displayModeBar": False},
-                    key=f"{key_prefix}_spark_{i}",
-                )
-        st.divider()
 
 
 def _render_passphrase_reset(name: str, reset_fn, key_prefix: str) -> None:
@@ -792,14 +741,7 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
                         placeholder.markdown(full_text)
 
 else:
-    st.markdown("## 📋 ウォッチリスト一覧" if lang == "日本語" else "## 📋 Watchlist")
-    tab_dash_public, tab_dash_community, tab_dash_personal = st.tabs(["🌐 公開", "🏘️ コミュニティ", "👤 個人"])
-    with tab_dash_public:
-        _render_watchlist_dashboard(st.session_state.watchlist, "dash_public", lang)
-    with tab_dash_community:
-        _render_watchlist_dashboard(st.session_state.community_watchlist, "dash_community", lang)
-    with tab_dash_personal:
-        _render_watchlist_dashboard(st.session_state.personal_watchlist, "dash_personal", lang)
+    st.page_link("pages/2_ウォッチリスト一覧.py", label="📋 ウォッチリスト一覧を見る（現在値・値動き・メモ）", icon="📋")
 
     st.markdown("""
 ---
