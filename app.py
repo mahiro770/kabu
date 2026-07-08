@@ -504,7 +504,7 @@ if "community_watchlist_owner" not in st.session_state:
 with st.sidebar:
     st.markdown("## 📋 ウォッチリスト")
 
-    username = st.text_input("あなたの名前", key="username_input", placeholder="例: まひろ")
+    username = st.text_input("あなたの名前", key="username_input", placeholder="例: 山田")
     username = username.strip() or "匿名"
 
     tab_public, tab_community, tab_personal = st.tabs(["🌐 公開", "🏘️ コミュニティ", "👤 個人"])
