@@ -99,7 +99,7 @@ src/
 
 ## 技術スタック
 
-Streamlit / yfinance / Plotly / pandas / Google Cloud Firestore / Ollama / Google Gemini API / deep-translator / BeautifulSoup
+Python / Streamlit / yfinance / Plotly / pandas / Google Cloud Firestore / Ollama / Google Gemini API / deep-translator / BeautifulSoup
 
 ## 注意事項
 
