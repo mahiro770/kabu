@@ -60,52 +60,77 @@ def _get_watchlist_quote(ticker: str, period: str, interval: str) -> dict | None
     return {"close": close, "current": current, "change": change, "change_pct": change_pct}
 
 
+UNGROUPED_LABEL = "未分類"
+
+
+def _render_item(wt: dict, wl: list, i: int, save_fn, key_prefix: str) -> None:
+    ticker = wt["ticker"]
+    quote = _get_watchlist_quote(ticker, period, interval)
+    col_name, col_price, col_chart = st.columns([2, 2, 4])
+    with col_name:
+        if st.button(wt["name"], key=f"{key_prefix}_sel_{i}", use_container_width=True):
+            st.session_state.current_ticker = ticker
+            st.switch_page("app.py")
+        st.caption(ticker)
+    if quote is None:
+        col_price.caption("データ取得失敗")
+        col_chart.caption("—")
+    else:
+        currency = "JPY" if ticker.endswith(".T") else "USD"
+        with col_price:
+            st.metric(
+                "現在値",
+                f"{quote['current']:,.0f} {currency}",
+                f"{quote['change']:+,.0f} ({quote['change_pct']:+.2f}%)",
+            )
+        with col_chart:
+            color = "#34d399" if quote["change"] >= 0 else "#f87171"
+            fig = build_watchlist_line_chart(quote["close"], color, is_intraday)
+            st.plotly_chart(
+                fig, width="stretch", config={"displayModeBar": False},
+                key=f"{key_prefix}_spark_{i}",
+            )
+
+    col_memo, col_group, col_save = st.columns([4, 2, 1])
+    with col_memo:
+        memo_val = st.text_area(
+            "メモ", value=wt.get("memo", ""), key=f"{key_prefix}_memo_{i}",
+            height=68, placeholder="メモを入力（例: 決算待ち、押し目待ちなど）",
+        )
+    with col_group:
+        group_val = st.text_input(
+            "グループ", value=wt.get("group", ""), key=f"{key_prefix}_group_{i}",
+            placeholder="例: 自動車産業",
+        )
+    with col_save:
+        st.markdown("<div style='height: 1.9rem'></div>", unsafe_allow_html=True)
+        if save_fn is not None and st.button("保存", key=f"{key_prefix}_save_{i}", use_container_width=True):
+            wt["memo"] = memo_val
+            wt["group"] = group_val.strip()
+            save_fn(wl)
+            st.toast("保存しました")
+
+    st.divider()
+
+
 def _render_dashboard(wl: list, save_fn, key_prefix: str) -> None:
     if not wl:
         st.caption("銘柄が登録されていません。ホーム画面から追加してください。")
         return
 
+    groups: dict[str, list[tuple[int, dict]]] = {}
     for i, wt in enumerate(wl):
-        ticker = wt["ticker"]
-        quote = _get_watchlist_quote(ticker, period, interval)
-        col_name, col_price, col_chart = st.columns([2, 2, 4])
-        with col_name:
-            if st.button(wt["name"], key=f"{key_prefix}_sel_{i}", use_container_width=True):
-                st.session_state.current_ticker = ticker
-                st.switch_page("app.py")
-            st.caption(ticker)
-        if quote is None:
-            col_price.caption("データ取得失敗")
-            col_chart.caption("—")
-        else:
-            currency = "JPY" if ticker.endswith(".T") else "USD"
-            with col_price:
-                st.metric(
-                    "現在値",
-                    f"{quote['current']:,.0f} {currency}",
-                    f"{quote['change']:+,.0f} ({quote['change_pct']:+.2f}%)",
-                )
-            with col_chart:
-                color = "#34d399" if quote["change"] >= 0 else "#f87171"
-                fig = build_watchlist_line_chart(quote["close"], color, is_intraday)
-                st.plotly_chart(
-                    fig, width="stretch", config={"displayModeBar": False},
-                    key=f"{key_prefix}_spark_{i}",
-                )
+        group_name = (wt.get("group") or "").strip() or UNGROUPED_LABEL
+        groups.setdefault(group_name, []).append((i, wt))
 
-        col_memo, col_memo_btn = st.columns([5, 1])
-        with col_memo:
-            memo_val = st.text_area(
-                "メモ", value=wt.get("memo", ""), key=f"{key_prefix}_memo_{i}",
-                height=68, label_visibility="collapsed", placeholder="メモを入力（例: 決算待ち、押し目待ちなど）",
-            )
-        with col_memo_btn:
-            if save_fn is not None and st.button("保存", key=f"{key_prefix}_memo_save_{i}", use_container_width=True):
-                wt["memo"] = memo_val
-                save_fn(wl)
-                st.toast("メモを保存しました")
+    group_names = sorted(g for g in groups if g != UNGROUPED_LABEL)
+    if UNGROUPED_LABEL in groups:
+        group_names.append(UNGROUPED_LABEL)
 
-        st.divider()
+    for group_name in group_names:
+        st.markdown(f"#### 📁 {group_name}")
+        for i, wt in groups[group_name]:
+            _render_item(wt, wl, i, save_fn, key_prefix)
 
 
 tab_public, tab_community, tab_personal = st.tabs(["🌐 公開", "🏘️ コミュニティ", "👤 個人"])
