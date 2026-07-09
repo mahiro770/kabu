@@ -337,9 +337,13 @@ code {{ background: var(--code-bg) !important; color: var(--code-text) !importan
 
 
 def get_current_theme() -> str:
-    # 通常のsession_state値（"theme_choice"）で保持する。ウィジェットのkeyだけに
-    # 紐づけると、ページ遷移でそのウィジェットが再描画されない間に値がリセット
-    # されてしまうため、current_tickerなどと同じ明示代入パターンにしている。
+    # ウィジェット自身のkey（"app_theme_widget"）はクリック直後の同一スクリプト内
+    # でも最新値になっているため、まずそれを優先して読む（切り替えた瞬間に反映
+    # させるため）。ページ遷移でそのウィジェットがまだ描画されていない場合は
+    # 存在しないので、current_tickerと同じ明示代入パターンの"theme_choice"に
+    # フォールバックする。
+    if "app_theme_widget" in st.session_state:
+        return st.session_state["app_theme_widget"]
     return st.session_state.get("theme_choice", DEFAULT_THEME)
 
 

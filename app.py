@@ -156,6 +156,21 @@ def _normalize_ticker(t: str) -> str:
     return t
 
 
+@st.cache_data(show_spinner=False, ttl=300)
+def _cached_stock_data(ticker: str, period: str):
+    return get_stock_data(ticker, period)
+
+
+@st.cache_data(show_spinner=False, ttl=300)
+def _get_financial_tab_data(ticker: str, is_japan: bool):
+    fin_history = get_financial_history(ticker)
+    forecast = get_earnings_forecast(ticker)
+    major_holders = get_major_shareholders_jp(ticker) if is_japan else get_major_holders(ticker)
+    margin_history = get_margin_trading_history(ticker, weeks=5) if is_japan else None
+    return fin_history, forecast, major_holders, margin_history
+
+
+@st.cache_data(show_spinner=False, ttl=300)
 def _resolve_stock(raw: str, period: str = "5d"):
     """入力値をティッカーとして解決し、価格データを取得する。
     ティッカーとして直接取得できなければ、会社名として検索して再試行する。
@@ -605,7 +620,7 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
         if resolved_by_name:
             st.caption(f"🔍「{ticker_raw}」→ **{ticker}** の検索結果を表示しています")
         with st.spinner(f"{index_name}のデータを取得中..."):
-            idx_df = get_stock_data(index_ticker, period)
+            idx_df = _cached_stock_data(index_ticker, period)
         df = add_indicators(df)
         signals = get_signals(df)
         stats = get_summary_stats(df, info)
@@ -730,10 +745,7 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
         with tab3:
             if info:
                 with st.spinner("過去の業績データ・業績予想を取得中..."):
-                    fin_history = get_financial_history(ticker)
-                    forecast = get_earnings_forecast(ticker)
-                    major_holders = get_major_shareholders_jp(ticker) if is_japan else get_major_holders(ticker)
-                    margin_history = get_margin_trading_history(ticker, weeks=5) if is_japan else None
+                    fin_history, forecast, major_holders, margin_history = _get_financial_tab_data(ticker, is_japan)
                 display_financials(info, currency, lang, fin_history, forecast, ticker, is_japan, major_holders, margin_history)
             else:
                 st.warning("財務データを取得できませんでした")
