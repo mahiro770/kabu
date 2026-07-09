@@ -6,7 +6,7 @@ from src.watchlist import (
     load_watchlist, save_watchlist,
     save_personal_watchlist, save_community_watchlist,
 )
-from src.ui import inject_theme
+from src.ui import inject_theme, render_theme_switcher, get_current_theme
 
 st.set_page_config(
     page_title="ウォッチリスト一覧",
@@ -17,6 +17,12 @@ inject_theme()
 
 st.markdown("# 📋 ウォッチリスト一覧")
 st.caption("登録銘柄の現在値・値動き・メモをまとめて確認できます")
+
+with st.sidebar:
+    st.markdown("## ⚙️ 設定")
+    render_theme_switcher()
+
+is_dark = get_current_theme() == "dark"
 
 PERIOD_OPTIONS = {
     "1日": ("1d", "5m"),
@@ -86,10 +92,10 @@ def _render_item(wt: dict, wl: list, i: int, save_fn, key_prefix: str) -> None:
                 )
             with col_chart:
                 color = "#7fb69c" if quote["change"] >= 0 else "#c98f89"
-                fig = build_watchlist_line_chart(quote["close"], color, is_intraday)
+                fig = build_watchlist_line_chart(quote["close"], color, is_intraday, dark=is_dark)
                 st.plotly_chart(
                     fig, width="stretch", config={"displayModeBar": False},
-                    key=f"{key_prefix}_spark_{i}",
+                    key=f"{key_prefix}_spark_{i}", theme=None,
                 )
 
         col_memo, col_group, col_save = st.columns([4, 2, 1])

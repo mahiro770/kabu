@@ -43,9 +43,11 @@ def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame) -> None:
     )
 
 
-def build_watchlist_line_chart(close: pd.Series, color: str, intraday: bool = False) -> go.Figure:
+def build_watchlist_line_chart(close: pd.Series, color: str, intraday: bool = False, dark: bool = True) -> go.Figure:
     """ウォッチリスト一覧用の軸・日付ラベル付き価格チャート。"""
     tick_fmt = "%H:%M" if intraday else "%m/%d"
+    tick_color = "#9ca3af" if dark else "#5b6572"
+    grid_color = "rgba(255,255,255,0.08)" if dark else "rgba(15,23,42,0.12)"
     fig = go.Figure(go.Scatter(
         x=close.index, y=close.values, mode="lines", line=dict(color=color, width=1.5),
         hovertemplate=f"%{{x|%Y/%m/%d {'%H:%M' if intraday else ''}}}<br>%{{y:,.1f}}<extra></extra>",
@@ -58,17 +60,17 @@ def build_watchlist_line_chart(close: pd.Series, color: str, intraday: bool = Fa
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(
             showgrid=False, tickformat=tick_fmt, nticks=5,
-            tickfont=dict(size=10, color="#9ca3af"), fixedrange=True,
+            tickfont=dict(size=10, color=tick_color), fixedrange=True,
         ),
         yaxis=dict(
-            side="right", showgrid=True, gridcolor="rgba(255,255,255,0.08)", griddash="dash",
-            tickfont=dict(size=10, color="#9ca3af"), fixedrange=True,
+            side="right", showgrid=True, gridcolor=grid_color, griddash="dash",
+            tickfont=dict(size=10, color=tick_color), fixedrange=True,
         ),
     )
     return fig
 
 
-def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure:
+def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list, dark: bool = True) -> go.Figure:
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
@@ -141,7 +143,7 @@ def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure
         title=f"{ticker} 価格チャート",
         xaxis_rangeslider_visible=False,
         height=580,
-        template="plotly_dark",
+        template="plotly_dark" if dark else "plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         margin=dict(t=60, b=20),
     )
@@ -151,7 +153,7 @@ def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure
     return fig
 
 
-def build_rsi_chart(df: pd.DataFrame) -> go.Figure:
+def build_rsi_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -171,7 +173,7 @@ def build_rsi_chart(df: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title="RSI（相対力指数）",
         height=220,
-        template="plotly_dark",
+        template="plotly_dark" if dark else "plotly_white",
         yaxis=dict(range=[0, 100]),
         margin=dict(t=40, b=20),
         showlegend=False,
@@ -179,7 +181,7 @@ def build_rsi_chart(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def build_macd_chart(df: pd.DataFrame) -> go.Figure:
+def build_macd_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     hist_colors = [
         "#26a69a" if v >= 0 else "#ef5350"
         for v in df["macd_hist"].fillna(0)
@@ -209,14 +211,14 @@ def build_macd_chart(df: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title="MACD",
         height=220,
-        template="plotly_dark",
+        template="plotly_dark" if dark else "plotly_white",
         margin=dict(t=40, b=20),
         legend=dict(orientation="h"),
     )
     return fig
 
 
-def build_adx_chart(df: pd.DataFrame) -> go.Figure:
+def build_adx_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -238,14 +240,14 @@ def build_adx_chart(df: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title="ADX（トレンド強度）/ +DI・-DI",
         height=220,
-        template="plotly_dark",
+        template="plotly_dark" if dark else "plotly_white",
         margin=dict(t=40, b=20),
         legend=dict(orientation="h"),
     )
     return fig
 
 
-def build_obv_chart(df: pd.DataFrame) -> go.Figure:
+def build_obv_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -260,7 +262,7 @@ def build_obv_chart(df: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title="OBV（出来高バランス）",
         height=220,
-        template="plotly_dark",
+        template="plotly_dark" if dark else "plotly_white",
         margin=dict(t=40, b=20),
         legend=dict(orientation="h"),
     )
@@ -272,6 +274,7 @@ def build_comparison_chart(
     idx_df: pd.DataFrame,
     ticker: str,
     idx_name: str,
+    dark: bool = True,
 ) -> go.Figure:
     # 共通期間に揃える
     start = max(df.index[0], idx_df.index[0])
@@ -305,7 +308,7 @@ def build_comparison_chart(
     fig.update_layout(
         title=f"相対パフォーマンス比較（期初=100）　超過リターン: {sign}{alpha:.1f}%",
         height=320,
-        template="plotly_dark",
+        template="plotly_dark" if dark else "plotly_white",
         yaxis_title="相対パフォーマンス",
         margin=dict(t=50, b=20),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
