@@ -49,8 +49,8 @@ if run_btn:
             st.info("AIが見出しを分析し、注目銘柄を抽出します。**投資は自己責任でお願いします。**")
 
             tabs = st.tabs([model_label(m) for m in selected_models]) if len(selected_models) > 1 else [st.container()]
-            for tab, model in zip(tabs, selected_models):
-                with tab:
+            for i, (tab, model) in enumerate(zip(tabs, selected_models)):
+                with tab, st.container(border=True, key=f"seccard_screen_report_{i}"):
                     placeholder = st.empty()
                     full_text = ""
                     with st.spinner(f"{model_label(model)} が分析中...（最大{timeout_sec}秒応答がなければ打ち切ります）"):
@@ -58,8 +58,8 @@ if run_btn:
                             full_text += chunk
                             placeholder.markdown(full_text)
 else:
-    st.markdown("""
----
+    with st.container(border=True, key="seccard_screen_guide"):
+        st.markdown("""
 ### 使い方
 
 | ステップ | 内容 |

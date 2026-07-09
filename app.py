@@ -305,63 +305,67 @@ def display_financials(
         label = "セクター / 業種" if ja else "Sector / Industry"
         st.caption(f"{label}: **{sector}** / {industry}")
 
-    st.markdown("#### バリュエーション" if ja else "#### Valuation")
-    v1, v2, v3, v4, v5 = st.columns(5)
-    v1.metric("PER（実績）" if ja else "P/E (TTM)", _fmt_fin(info.get("trailingPE"), ".1f", mult))
-    v2.metric("PER（予想）" if ja else "P/E (Fwd)", _fmt_fin(info.get("forwardPE"), ".1f", mult))
-    v3.metric("PBR" if ja else "P/B", _fmt_fin(info.get("priceToBook"), ".2f", mult))
-    v4.metric("EPS", _fmt_fin(info.get("trailingEps"), ".2f"))
-    v5.metric("時価総額" if ja else "Market Cap", _fmt_cap(info.get("marketCap"), currency))
+    with st.container(border=True, key="seccard_valuation"):
+        st.markdown("#### バリュエーション" if ja else "#### Valuation")
+        v1, v2, v3, v4, v5 = st.columns(5)
+        v1.metric("PER（実績）" if ja else "P/E (TTM)", _fmt_fin(info.get("trailingPE"), ".1f", mult))
+        v2.metric("PER（予想）" if ja else "P/E (Fwd)", _fmt_fin(info.get("forwardPE"), ".1f", mult))
+        v3.metric("PBR" if ja else "P/B", _fmt_fin(info.get("priceToBook"), ".2f", mult))
+        v4.metric("EPS", _fmt_fin(info.get("trailingEps"), ".2f"))
+        v5.metric("時価総額" if ja else "Market Cap", _fmt_cap(info.get("marketCap"), currency))
 
-    st.markdown("#### 収益性" if ja else "#### Profitability")
-    p1, p2, p3, p4, p5 = st.columns(5)
-    p1.metric("ROE", _fmt_pct(info.get("returnOnEquity")))
-    p2.metric("ROA", _fmt_pct(info.get("returnOnAssets")))
-    p3.metric("純利益率" if ja else "Net Margin", _fmt_pct(info.get("profitMargins")))
-    p4.metric("営業利益率" if ja else "Operating Margin", _fmt_pct(info.get("operatingMargins")))
-    p5.metric("粗利益率" if ja else "Gross Margin", _fmt_pct(info.get("grossMargins")))
+    with st.container(border=True, key="seccard_profitability"):
+        st.markdown("#### 収益性" if ja else "#### Profitability")
+        p1, p2, p3, p4, p5 = st.columns(5)
+        p1.metric("ROE", _fmt_pct(info.get("returnOnEquity")))
+        p2.metric("ROA", _fmt_pct(info.get("returnOnAssets")))
+        p3.metric("純利益率" if ja else "Net Margin", _fmt_pct(info.get("profitMargins")))
+        p4.metric("営業利益率" if ja else "Operating Margin", _fmt_pct(info.get("operatingMargins")))
+        p5.metric("粗利益率" if ja else "Gross Margin", _fmt_pct(info.get("grossMargins")))
 
-    st.markdown("#### 成長性・財務健全性" if ja else "#### Growth & Financial Health")
-    g1, g2, g3, g4 = st.columns(4)
-    g1.metric("売上成長率" if ja else "Revenue Growth", _fmt_pct(info.get("revenueGrowth")))
-    g2.metric("利益成長率" if ja else "Earnings Growth", _fmt_pct(info.get("earningsGrowth")))
-    g3.metric("流動比率" if ja else "Current Ratio", _fmt_fin(info.get("currentRatio"), ".2f"))
-    g4.metric("D/Eレシオ" if ja else "D/E Ratio", _fmt_fin(info.get("debtToEquity"), ".2f"))
+    with st.container(border=True, key="seccard_growth"):
+        st.markdown("#### 成長性・財務健全性" if ja else "#### Growth & Financial Health")
+        g1, g2, g3, g4 = st.columns(4)
+        g1.metric("売上成長率" if ja else "Revenue Growth", _fmt_pct(info.get("revenueGrowth")))
+        g2.metric("利益成長率" if ja else "Earnings Growth", _fmt_pct(info.get("earningsGrowth")))
+        g3.metric("流動比率" if ja else "Current Ratio", _fmt_fin(info.get("currentRatio"), ".2f"))
+        g4.metric("D/Eレシオ" if ja else "D/E Ratio", _fmt_fin(info.get("debtToEquity"), ".2f"))
 
-    g5, g6, g7 = st.columns(3)
-    div = info.get("dividendYield")
-    if div is not None:
-        div_str = f"{div:.2f}%" if div > 0.5 else f"{div*100:.2f}%"
-    else:
-        div_str = "N/A"
-    g5.metric("配当利回り" if ja else "Dividend Yield", div_str)
-    g6.metric("配当性向" if ja else "Payout Ratio", _fmt_pct(info.get("payoutRatio")))
-    latest_equity_ratio = (
-        fin_history.iloc[0]["equity_ratio"]
-        if fin_history is not None and not fin_history.empty else None
-    )
-    g7.metric("自己資本比率" if ja else "Equity Ratio", _fmt_pct(latest_equity_ratio))
+        g5, g6, g7 = st.columns(3)
+        div = info.get("dividendYield")
+        if div is not None:
+            div_str = f"{div:.2f}%" if div > 0.5 else f"{div*100:.2f}%"
+        else:
+            div_str = "N/A"
+        g5.metric("配当利回り" if ja else "Dividend Yield", div_str)
+        g6.metric("配当性向" if ja else "Payout Ratio", _fmt_pct(info.get("payoutRatio")))
+        latest_equity_ratio = (
+            fin_history.iloc[0]["equity_ratio"]
+            if fin_history is not None and not fin_history.empty else None
+        )
+        g7.metric("自己資本比率" if ja else "Equity Ratio", _fmt_pct(latest_equity_ratio))
 
     if is_japan and margin_history:
-        latest = margin_history[0]
-        st.markdown("#### 信用取引" if ja else "#### Margin Trading")
-        m1, m2, m3 = st.columns(3)
-        m1.metric("信用買残" if ja else "Margin Buy Balance", _fmt_fin(latest.get("buy_balance"), ",.1f", "千株" if ja else "K shares"))
-        m2.metric("信用売残" if ja else "Margin Sell Balance", _fmt_fin(latest.get("sell_balance"), ",.1f", "千株" if ja else "K shares"))
-        m3.metric("信用倍率" if ja else "Margin Ratio", _fmt_fin(latest.get("ratio"), ".2f", mult))
-        st.caption(f"{'時点' if ja else 'As of'}: {latest.get('date', 'N/A')}（{'株探' if ja else 'Kabutan'}調べ）")
+        with st.container(border=True, key="seccard_margin"):
+            latest = margin_history[0]
+            st.markdown("#### 信用取引" if ja else "#### Margin Trading")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("信用買残" if ja else "Margin Buy Balance", _fmt_fin(latest.get("buy_balance"), ",.1f", "千株" if ja else "K shares"))
+            m2.metric("信用売残" if ja else "Margin Sell Balance", _fmt_fin(latest.get("sell_balance"), ",.1f", "千株" if ja else "K shares"))
+            m3.metric("信用倍率" if ja else "Margin Ratio", _fmt_fin(latest.get("ratio"), ".2f", mult))
+            st.caption(f"{'時点' if ja else 'As of'}: {latest.get('date', 'N/A')}（{'株探' if ja else 'Kabutan'}調べ）")
 
-        if len(margin_history) > 1:
-            with st.expander("直近1か月の信用取引推移" if ja else "Margin Trading (past month)"):
-                header = "| 日付 | 信用買残(千株) | 信用売残(千株) | 信用倍率 |" if ja \
-                    else "| Date | Buy Balance (K) | Sell Balance (K) | Ratio |"
-                rows = [header, "|------|------|------|------|"]
-                for h in margin_history:
-                    rows.append(
-                        f"| {h.get('date', 'N/A')} | {_fmt_fin(h.get('buy_balance'), ',.1f')} | "
-                        f"{_fmt_fin(h.get('sell_balance'), ',.1f')} | {_fmt_fin(h.get('ratio'), '.2f')} |"
-                    )
-                st.markdown("\n".join(rows))
+            if len(margin_history) > 1:
+                with st.expander("直近1か月の信用取引推移" if ja else "Margin Trading (past month)"):
+                    header = "| 日付 | 信用買残(千株) | 信用売残(千株) | 信用倍率 |" if ja \
+                        else "| Date | Buy Balance (K) | Sell Balance (K) | Ratio |"
+                    rows = [header, "|------|------|------|------|"]
+                    for h in margin_history:
+                        rows.append(
+                            f"| {h.get('date', 'N/A')} | {_fmt_fin(h.get('buy_balance'), ',.1f')} | "
+                            f"{_fmt_fin(h.get('sell_balance'), ',.1f')} | {_fmt_fin(h.get('ratio'), '.2f')} |"
+                        )
+                    st.markdown("\n".join(rows))
 
     if fin_history is not None and not fin_history.empty:
         st.markdown("#### 過去の業績推移" if ja else "#### Historical Performance")
@@ -613,18 +617,20 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
 
         st.markdown(f"### {name}　`{ticker}`")
 
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
-        c1.metric("現在値", f"{current:,.0f} {currency}",
-                  f"{change:+,.0f} ({change_pct:+.2f}%)")
-        c2.metric("52週高値", f"{stats['week52_high']:,.0f}")
-        c3.metric("52週安値", f"{stats['week52_low']:,.0f}")
-        c4.metric("RSI(14)", f"{df['rsi'].iloc[-1]:.1f}" if not df["rsi"].isna().all() else "N/A")
-        c5.metric("ボラティリティ", f"{stats['volatility']:.1f}%")
+        with st.container(border=True, key="seccard_header_metrics"):
+            c_price, c_signal = st.columns([3, 1])
+            c_price.metric("現在値", f"{current:,.0f} {currency}",
+                            f"{change:+,.0f} ({change_pct:+.2f}%)")
+            overall = signals.get("overall", "中立")
+            badge_html = signal_badge(overall)
+            c_signal.markdown("**総合シグナル**")
+            c_signal.markdown(badge_html, unsafe_allow_html=True)
 
-        overall = signals.get("overall", "中立")
-        badge_html = signal_badge(overall)
-        c6.markdown("**総合シグナル**")
-        c6.markdown(badge_html, unsafe_allow_html=True)
+            c2, c3, c4, c5 = st.columns(4)
+            c2.metric("52週高値", f"{stats['week52_high']:,.0f}")
+            c3.metric("52週安値", f"{stats['week52_low']:,.0f}")
+            c4.metric("RSI(14)", f"{df['rsi'].iloc[-1]:.1f}" if not df["rsi"].isna().all() else "N/A")
+            c5.metric("ボラティリティ", f"{stats['volatility']:.1f}%")
 
         st.divider()
 
@@ -733,18 +739,19 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
             st.caption(f"使用モデル: {selected_model.name}")
 
             if st.button("🤖 AI分析を実行", type="primary", key="ai_btn"):
-                placeholder = st.empty()
-                full_text = ""
-                with st.spinner("AIが分析中...（1〜2分かかります）"):
-                    for chunk in analyze_stock_stream(df, info, signals, stats, selected_model):
-                        full_text += chunk
-                        placeholder.markdown(full_text)
+                with st.container(border=True, key="seccard_ai_report"):
+                    placeholder = st.empty()
+                    full_text = ""
+                    with st.spinner("AIが分析中...（1〜2分かかります）"):
+                        for chunk in analyze_stock_stream(df, info, signals, stats, selected_model):
+                            full_text += chunk
+                            placeholder.markdown(full_text)
 
 else:
     st.page_link("pages/2_ウォッチリスト一覧.py", label="📋 ウォッチリスト一覧を見る（現在値・値動き・メモ）", icon="📋")
 
-    st.markdown("""
----
+    with st.container(border=True, key="seccard_usage_guide"):
+        st.markdown("""
 ### 使い方
 
 | ステップ | 内容 |

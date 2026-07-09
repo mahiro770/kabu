@@ -12,7 +12,7 @@ html, body, [class*="css"] {
     background: radial-gradient(circle at 15% -10%, #1a2130 0%, #0a0d15 45%) fixed;
 }
 
-.block-container { padding-top: 1.5rem; }
+.block-container { padding-top: 2.2rem; padding-bottom: 3rem; }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
@@ -23,20 +23,22 @@ html, body, [class*="css"] {
 /* Headings */
 h1 {
     font-weight: 700;
+    font-size: 2.6rem;
+    letter-spacing: -0.01em;
     background: linear-gradient(90deg, #8fb4b0, #c7d1d9);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     width: fit-content;
 }
-h3, h4 { color: #d8dde3; }
+h3, h4 { color: #d8dde3; margin-top: 0.4rem; margin-bottom: 1rem; }
 
 /* Metric cards */
 [data-testid="stMetric"] {
     background: linear-gradient(160deg, #161c26, #0f131b);
     border: 1px solid rgba(148, 163, 184, 0.16);
-    border-radius: 12px;
-    padding: 0.9rem 1.1rem;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -46,12 +48,29 @@ h3, h4 { color: #d8dde3; }
     border-color: rgba(111, 165, 168, 0.4);
 }
 [data-testid="stMetricLabel"] { color: #9ca3af; }
+/* Long values (e.g. "33.51兆円", "-59 (-2.04%)") wrap onto a second line
+   instead of truncating with an ellipsis — never hide the actual number.
+   The truncation styles are set on the innermost <p>, not on stMetricValue
+   or stMarkdownContainer themselves, so all three levels must be overridden. */
+[data-testid="stMetricValue"], [data-testid="stMetricDelta"],
+[data-testid="stMetricValue"] [data-testid="stMarkdownContainer"],
+[data-testid="stMetricDelta"] [data-testid="stMarkdownContainer"],
+[data-testid="stMetricValue"] p, [data-testid="stMetricDelta"] p {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: break-word;
+    line-height: 1.2;
+}
 [data-testid="stMetricValue"] { color: #e5e9ed; }
 
 /* Primary buttons */
 [data-testid="stBaseButton-primary"] {
     background: linear-gradient(90deg, #3d6b70, #2c4d52);
     border: none;
+    border-radius: 10px;
+    padding: 0.6rem 1.5rem;
+    font-size: 1.02rem;
     box-shadow: 0 0 0 rgba(111, 165, 168, 0);
     transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
@@ -62,6 +81,8 @@ h3, h4 { color: #d8dde3; }
 
 /* Secondary / default buttons */
 [data-testid="stBaseButton-secondary"] {
+    border-radius: 10px;
+    padding: 0.5rem 1.1rem;
     transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 [data-testid="stBaseButton-secondary"]:hover {
@@ -105,6 +126,17 @@ h3, h4 { color: #d8dde3; }
     transform: translateY(-2px);
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
     border-color: rgba(111, 165, 168, 0.4) !important;
+}
+
+/* Static section cards — used to group related content (financial metric
+   groups, AI report output, usage guides) into visually distinct blocks.
+   Unlike wlcard, these aren't clickable, so no hover lift. */
+[class*="st-key-seccard_"] {
+    border-radius: 16px !important;
+    padding: 1.3rem 1.5rem !important;
+    margin-bottom: 1.6rem;
+    background: linear-gradient(160deg, rgba(19, 25, 34, 0.55), rgba(14, 18, 25, 0.55)) !important;
+    border-color: rgba(148, 163, 184, 0.14) !important;
 }
 
 /* Radio groups styled as pill chips (period / folder selectors).
