@@ -1,4 +1,5 @@
 import re
+import sys
 
 import requests
 from bs4 import BeautifulSoup
@@ -77,6 +78,14 @@ def _fetch_from_irbank(code: str) -> list[dict] | None:
     soup = BeautifulSoup(resp.text, "html.parser")
     heading = soup.find("h2", id="c_share")
     if heading is None:
+        title = soup.find("title")
+        msg = (
+            f"[holder_fetcher DEBUG] IR BANK main ({code}) status={resp.status_code} "
+            f"len={len(resp.text)} title={title.get_text(strip=True) if title else None} "
+            f"body_snippet={resp.text[:300]!r}"
+        )
+        print(msg, flush=True)
+        print(msg, file=sys.stderr, flush=True)
         return None
     link = heading.find("a", class_="nxq")
     if link is None or not link.get("href"):
@@ -88,6 +97,14 @@ def _fetch_from_irbank(code: str) -> list[dict] | None:
     soup2 = BeautifulSoup(resp2.text, "html.parser")
     table = soup2.find("table", class_="cs")
     if table is None:
+        title2 = soup2.find("title")
+        msg = (
+            f"[holder_fetcher DEBUG] IR BANK share ({code}) status={resp2.status_code} "
+            f"len={len(resp2.text)} title={title2.get_text(strip=True) if title2 else None} "
+            f"body_snippet={resp2.text[:300]!r}"
+        )
+        print(msg, flush=True)
+        print(msg, file=sys.stderr, flush=True)
         return None
 
     # 大量保有報告は保有比率の変動履歴（イベントログ）なので、

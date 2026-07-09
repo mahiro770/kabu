@@ -1,3 +1,5 @@
+import sys
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -60,6 +62,14 @@ def _fetch_from_irbank(code: str, weeks: int) -> list[dict]:
     soup = BeautifulSoup(resp.text, "html.parser")
     table = soup.find("table", id="tbc")
     if table is None:
+        title = soup.find("title")
+        msg = (
+            f"[margin_fetcher DEBUG] IR BANK ({code}) status={resp.status_code} "
+            f"len={len(resp.text)} title={title.get_text(strip=True) if title else None} "
+            f"body_snippet={resp.text[:300]!r}"
+        )
+        print(msg, flush=True)
+        print(msg, file=sys.stderr, flush=True)
         return []
 
     history = []
