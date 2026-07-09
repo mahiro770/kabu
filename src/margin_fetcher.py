@@ -23,6 +23,13 @@ def get_margin_trading_history(ticker: str, weeks: int = 5) -> list[dict]:
 
         header = soup.find("h2", string=lambda s: s and "信用取引" in s)
         if header is None:
+            # TODO(diagnostic, remove after investigating): 本番環境でこのセクションが
+            # 消える原因（IPブロック/CAPTCHA/構造変化）を切り分けるための一時ログ。
+            print(
+                f"[margin_fetcher DEBUG] ({ticker}) status={resp.status_code} "
+                f"len={len(resp.text)} title_snippet={soup.title.get_text(strip=True) if soup.title else 'N/A'} "
+                f"body_snippet={resp.text[:300]!r}"
+            )
             return []
         table = header.find_next("table")
 
@@ -47,7 +54,7 @@ def get_margin_trading_history(ticker: str, weeks: int = 5) -> list[dict]:
             })
         return history
     except Exception as e:
-        print(f"信用取引データ取得エラー ({ticker}): {e}")
+        print(f"信用取引データ取得エラー ({ticker}): {type(e).__name__}: {e}")
         return []
 
 

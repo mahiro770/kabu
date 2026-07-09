@@ -22,6 +22,13 @@ def get_major_shareholders_jp(ticker: str) -> list[dict] | None:
         soup = BeautifulSoup(resp.text, "html.parser")
         table = soup.select_one("table.stock_holder_1")
         if table is None:
+            # TODO(diagnostic, remove after investigating): 本番環境でこのセクションが
+            # 消える原因（IPブロック/CAPTCHA/構造変化）を切り分けるための一時ログ。
+            print(
+                f"[holder_fetcher DEBUG] ({ticker}) status={resp.status_code} "
+                f"len={len(resp.text)} title_snippet={soup.title.get_text(strip=True) if soup.title else 'N/A'} "
+                f"body_snippet={resp.text[:300]!r}"
+            )
             return None
 
         def _num(text: str) -> float | None:
@@ -47,5 +54,5 @@ def get_major_shareholders_jp(ticker: str) -> list[dict] | None:
             })
         return holders or None
     except Exception as e:
-        print(f"大株主データ取得エラー ({ticker}): {e}")
+        print(f"大株主データ取得エラー ({ticker}): {type(e).__name__}: {e}")
         return None
