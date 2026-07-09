@@ -370,7 +370,10 @@ def display_financials(
                 m1.metric("信用買残" if ja else "Margin Buy Balance", _fmt_fin(latest.get("buy_balance"), ",.1f", "千株" if ja else "K shares"))
                 m2.metric("信用売残" if ja else "Margin Sell Balance", _fmt_fin(latest.get("sell_balance"), ",.1f", "千株" if ja else "K shares"))
                 m3.metric("信用倍率" if ja else "Margin Ratio", _fmt_fin(latest.get("ratio"), ".2f", mult))
-                st.caption(f"{'時点' if ja else 'As of'}: {latest.get('date', 'N/A')}（{'株探' if ja else 'Kabutan'}調べ）")
+                source_label = ("IR BANK" if latest.get("source") == "irbank" else "株探") if ja \
+                    else ("IR BANK" if latest.get("source") == "irbank" else "Kabutan")
+                st.caption(f"{'時点' if ja else 'As of'}: {latest.get('date', 'N/A')}（{source_label}調べ）" if ja
+                           else f"{'As of'}: {latest.get('date', 'N/A')} (Source: {source_label})")
 
                 if len(margin_history) > 1:
                     with st.expander("直近1か月の信用取引推移" if ja else "Margin Trading (past month)"):
@@ -496,7 +499,19 @@ def display_financials(
                 )
             st.markdown("\n".join(rows))
             if is_japan:
-                st.caption("※ 有価証券報告書等に基づく大株主情報（株探調べ）")
+                if major_holders[0].get("source") == "irbank":
+                    st.caption(
+                        "※ 大量保有報告（5%ルール開示）に基づく直近の保有状況（IR BANK調べ）。"
+                        "株探の大株主一覧（有価証券報告書ベース）とは対象・件数が異なる場合があります"
+                        if ja else
+                        "Based on 5%-rule large shareholding disclosures (Source: IR BANK). "
+                        "May differ in scope/count from Kabutan's registry-based holder list."
+                    )
+                else:
+                    st.caption(
+                        "※ 有価証券報告書等に基づく大株主情報（株探調べ）" if ja
+                        else "Based on securities reports (Source: Kabutan)"
+                    )
     elif is_japan:
         kabutan_holder_url = f"https://kabutan.jp/stock/holder?code={ticker[:-2]}" if ticker else "https://kabutan.jp/"
         st.info(
