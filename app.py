@@ -23,7 +23,7 @@ from src.watchlist import (
     load_community_watchlist, save_community_watchlist,
     get_community_record, verify_community_passphrase, claim_community_name, reset_community_passphrase,
 )
-from src.ui import inject_theme, render_theme_switcher, get_current_theme
+from src.ui import inject_theme
 
 inject_theme()
 
@@ -581,10 +581,7 @@ with st.sidebar:
         }[x],
     )
 
-    render_theme_switcher()
-
 # ─── Main ────────────────────────────────────────────────────────────────────
-is_dark = get_current_theme() == "dark"
 
 st.markdown("# 📈 株式AI分析ツール")
 st.caption("テクニカル分析 × AI で買い場・売り場をアシスト")
@@ -661,7 +658,7 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
                 ["MA20", "MA50", "MA200", "BB", "一目雲", "VWAP"],
                 default=["MA20", "MA50"],
             )
-            fig_price = build_price_chart(df, ticker, show_ma, dark=is_dark)
+            fig_price = build_price_chart(df, ticker, show_ma)
             st.plotly_chart(fig_price, width="stretch", theme=None)
 
             st.markdown("#### テクニカルシグナル")
@@ -684,7 +681,7 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
             # 日経平均／S&P500 比較
             st.markdown(f"#### {index_name}との比較")
             if idx_df is not None and not idx_df.empty:
-                fig_cmp = build_comparison_chart(df, idx_df, ticker, index_name, dark=is_dark)
+                fig_cmp = build_comparison_chart(df, idx_df, ticker, index_name)
                 st.plotly_chart(fig_cmp, width="stretch", theme=None)
 
                 # 超過リターン表示
@@ -713,10 +710,10 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
                 st.caption(f"{index_name}のデータを取得できませんでした")
 
         with tab2:
-            st.plotly_chart(build_rsi_chart(df, dark=is_dark), width="stretch", theme=None)
-            st.plotly_chart(build_macd_chart(df, dark=is_dark), width="stretch", theme=None)
-            st.plotly_chart(build_adx_chart(df, dark=is_dark), width="stretch", theme=None)
-            st.plotly_chart(build_obv_chart(df, dark=is_dark), width="stretch", theme=None)
+            st.plotly_chart(build_rsi_chart(df), width="stretch", theme=None)
+            st.plotly_chart(build_macd_chart(df), width="stretch", theme=None)
+            st.plotly_chart(build_adx_chart(df), width="stretch", theme=None)
+            st.plotly_chart(build_obv_chart(df), width="stretch", theme=None)
 
             with st.expander("最新テクニカル値"):
                 last = df.iloc[-1]

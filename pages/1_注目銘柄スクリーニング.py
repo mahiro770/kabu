@@ -3,7 +3,7 @@ import streamlit as st
 from src.ai_analyst import list_model_choices
 from src.news_fetcher import fetch_nikkei_headlines, fetch_yahoo_business_news
 from src.stock_screener import screen_stocks_stream_with_timeout
-from src.ui import inject_theme, render_theme_switcher
+from src.ui import inject_theme
 
 st.set_page_config(
     page_title="注目銘柄スクリーニング",
@@ -28,7 +28,6 @@ with st.sidebar:
                              help="モデルからの応答（チャンク）がこの秒数以上止まった場合、そのモデルを諦めて次に進みます")
     nikkei_n = st.slider("日経の見出し件数", 5, 40, 20)
     yahoo_n = st.slider("Yahoo!ニュースの見出し件数", 3, 8, 8)
-    render_theme_switcher()
 
 run_btn = st.button("📡 ニュースを取得してAIスクリーニングを実行", type="primary")
 
