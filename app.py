@@ -370,8 +370,8 @@ def display_financials(
                 m1.metric("信用買残" if ja else "Margin Buy Balance", _fmt_fin(latest.get("buy_balance"), ",.1f", "千株" if ja else "K shares"))
                 m2.metric("信用売残" if ja else "Margin Sell Balance", _fmt_fin(latest.get("sell_balance"), ",.1f", "千株" if ja else "K shares"))
                 m3.metric("信用倍率" if ja else "Margin Ratio", _fmt_fin(latest.get("ratio"), ".2f", mult))
-                source_label = ("IR BANK" if latest.get("source") == "irbank" else "株探") if ja \
-                    else ("IR BANK" if latest.get("source") == "irbank" else "Kabutan")
+                source_names = {"irbank": "IR BANK", "jpx": "JPX", "kabutan": "株探" if ja else "Kabutan"}
+                source_label = source_names.get(latest.get("source"), "株探" if ja else "Kabutan")
                 st.caption(f"{'時点' if ja else 'As of'}: {latest.get('date', 'N/A')}（{source_label}調べ）" if ja
                            else f"{'As of'}: {latest.get('date', 'N/A')} (Source: {source_label})")
 

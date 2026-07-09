@@ -1,7 +1,10 @@
+import io
+import re
 import sys
 
 import requests
 from bs4 import BeautifulSoup
+from pypdf import PdfReader
 
 HEADERS = {
     "User-Agent": (
@@ -106,11 +109,73 @@ def _fetch_from_irbank(code: str, weeks: int) -> list[dict]:
     return history
 
 
+_JPX_ARCHIVE_URL = "https://www.jpx.co.jp/markets/statistics-equities/margin/05.html"
+_JPX_ROW_RE = re.compile(r"\b(\d{4}\d)\s+(JP\w{10})\s+(.+)$")
+_JPX_ARROW_RE = re.compile(r"[▲△▼]")
+_JPX_SPLIT_NUM_RE = re.compile(r"(\d),\s+(\d{3})\b")
+_JPX_DATE_RE = re.compile(r"syumatsu(\d{4})(\d{2})(\d{2})")
+
+
+def _find_latest_jpx_pdf_url() -> str | None:
+    resp = requests.get(_JPX_ARCHIVE_URL, headers=HEADERS, timeout=10)
+    soup = BeautifulSoup(resp.text, "html.parser")
+    hrefs = [
+        a["href"] for a in soup.find_all("a", href=True)
+        if "syumatsu" in a["href"] and a["href"].lower().endswith(".pdf")
+    ]
+    if not hrefs:
+        return None
+    hrefs.sort()  # ファイル名に日付(YYYYMMDD)が含まれるため文字列ソートで最新を特定できる
+    latest = hrefs[-1]
+    return f"https://www.jpx.co.jp{latest}" if latest.startswith("/") else latest
+
+
+def _fetch_from_jpx(code: str) -> dict | None:
+    """東証公式の「銘柄別信用取引週末残高」PDFから最新週のみを取得する。
+    全銘柄が1つの複数ページPDFにまとまっているため、直近1週間分の
+    スナップショットのみ返す（過去の推移は提供できない）。"""
+    pdf_url = _find_latest_jpx_pdf_url()
+    if pdf_url is None:
+        return None
+    resp = requests.get(pdf_url, headers=HEADERS, timeout=20)
+    reader = PdfReader(io.BytesIO(resp.content))
+
+    for page in reader.pages:
+        text = page.extract_text()
+        if not text or code not in text:
+            continue
+        for line in text.split("\n"):
+            m = _JPX_ROW_RE.search(line)
+            if m is None or not m.group(1).startswith(code):
+                continue
+            rest = _JPX_ARROW_RE.sub("", m.group(3))
+            rest = _JPX_SPLIT_NUM_RE.sub(r"\1,\2", rest)
+            tokens = rest.split()
+            if len(tokens) < 3:
+                continue
+            try:
+                sell = float(tokens[0].replace(",", ""))
+                buy = float(tokens[2].replace(",", ""))
+            except ValueError:
+                continue
+
+            date_m = _JPX_DATE_RE.search(pdf_url)
+            date_str = "-".join(date_m.groups()) if date_m else None
+            return {
+                "date": date_str,
+                "sell_balance": sell / 1000,
+                "buy_balance": buy / 1000,
+                "ratio": buy / sell if sell else None,
+                "source": "jpx",
+            }
+    return None
+
+
 def get_margin_trading_history(ticker: str, weeks: int = 5) -> list[dict]:
     """信用取引残高（買い残・売り残・倍率、週次）を直近weeks件取得する（日本株のみ）。
-    株探をまず試し、クラウドのデータセンターIPがボット判定されて取得できない場合は
-    IR BANKにフォールバックする。両方失敗した場合は例外を投げず空リストを返す
-    （呼び出し側は関連リンクへの誘導で代替する）。"""
+    株探→IR BANK→東証公式PDFの順に試し、クラウドのデータセンターIPがボット判定されて
+    取得できない場合は次のソースにフォールバックする。東証PDFは最新1週間分のみ提供。
+    すべて失敗した場合は例外を投げず空リストを返す（呼び出し側は関連リンクへの誘導で代替する）。"""
     if not ticker.endswith(".T"):
         return []
     code = ticker[:-2]
@@ -122,9 +187,17 @@ def get_margin_trading_history(ticker: str, weeks: int = 5) -> list[dict]:
         print(f"信用取引データ取得エラー (株探, {ticker}): {e}")
 
     try:
-        return _fetch_from_irbank(code, weeks)
+        history = _fetch_from_irbank(code, weeks)
+        if history:
+            return history
     except Exception as e:
         print(f"信用取引データ取得エラー (IR BANK, {ticker}): {e}")
+
+    try:
+        latest = _fetch_from_jpx(code)
+        return [latest] if latest else []
+    except Exception as e:
+        print(f"信用取引データ取得エラー (JPX, {ticker}): {e}")
         return []
 
 
