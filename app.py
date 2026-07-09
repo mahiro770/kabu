@@ -360,27 +360,34 @@ def display_financials(
         )
         g7.metric("自己資本比率" if ja else "Equity Ratio", _fmt_pct(latest_equity_ratio))
 
-    if is_japan and margin_history:
-        with st.container(border=True, key="seccard_margin"):
-            latest = margin_history[0]
-            st.markdown("#### 信用取引" if ja else "#### Margin Trading")
-            m1, m2, m3 = st.columns(3)
-            m1.metric("信用買残" if ja else "Margin Buy Balance", _fmt_fin(latest.get("buy_balance"), ",.1f", "千株" if ja else "K shares"))
-            m2.metric("信用売残" if ja else "Margin Sell Balance", _fmt_fin(latest.get("sell_balance"), ",.1f", "千株" if ja else "K shares"))
-            m3.metric("信用倍率" if ja else "Margin Ratio", _fmt_fin(latest.get("ratio"), ".2f", mult))
-            st.caption(f"{'時点' if ja else 'As of'}: {latest.get('date', 'N/A')}（{'株探' if ja else 'Kabutan'}調べ）")
+    if is_japan:
+        kabutan_url = f"https://kabutan.jp/stock/?code={ticker[:-2]}" if ticker else "https://kabutan.jp/"
+        if margin_history:
+            with st.container(border=True, key="seccard_margin"):
+                latest = margin_history[0]
+                st.markdown("#### 信用取引" if ja else "#### Margin Trading")
+                m1, m2, m3 = st.columns(3)
+                m1.metric("信用買残" if ja else "Margin Buy Balance", _fmt_fin(latest.get("buy_balance"), ",.1f", "千株" if ja else "K shares"))
+                m2.metric("信用売残" if ja else "Margin Sell Balance", _fmt_fin(latest.get("sell_balance"), ",.1f", "千株" if ja else "K shares"))
+                m3.metric("信用倍率" if ja else "Margin Ratio", _fmt_fin(latest.get("ratio"), ".2f", mult))
+                st.caption(f"{'時点' if ja else 'As of'}: {latest.get('date', 'N/A')}（{'株探' if ja else 'Kabutan'}調べ）")
 
-            if len(margin_history) > 1:
-                with st.expander("直近1か月の信用取引推移" if ja else "Margin Trading (past month)"):
-                    header = "| 日付 | 信用買残(千株) | 信用売残(千株) | 信用倍率 |" if ja \
-                        else "| Date | Buy Balance (K) | Sell Balance (K) | Ratio |"
-                    rows = [header, "|------|------|------|------|"]
-                    for h in margin_history:
-                        rows.append(
-                            f"| {h.get('date', 'N/A')} | {_fmt_fin(h.get('buy_balance'), ',.1f')} | "
-                            f"{_fmt_fin(h.get('sell_balance'), ',.1f')} | {_fmt_fin(h.get('ratio'), '.2f')} |"
-                        )
-                    st.markdown("\n".join(rows))
+                if len(margin_history) > 1:
+                    with st.expander("直近1か月の信用取引推移" if ja else "Margin Trading (past month)"):
+                        header = "| 日付 | 信用買残(千株) | 信用売残(千株) | 信用倍率 |" if ja \
+                            else "| Date | Buy Balance (K) | Sell Balance (K) | Ratio |"
+                        rows = [header, "|------|------|------|------|"]
+                        for h in margin_history:
+                            rows.append(
+                                f"| {h.get('date', 'N/A')} | {_fmt_fin(h.get('buy_balance'), ',.1f')} | "
+                                f"{_fmt_fin(h.get('sell_balance'), ',.1f')} | {_fmt_fin(h.get('ratio'), '.2f')} |"
+                            )
+                        st.markdown("\n".join(rows))
+        else:
+            st.info(
+                f"信用取引データは現在取得できません。[株探で直接確認する]({kabutan_url})" if ja
+                else f"Margin trading data is currently unavailable. [Check it directly on Kabutan]({kabutan_url})"
+            )
 
     if fin_history is not None and not fin_history.empty:
         st.markdown("#### 過去の業績推移" if ja else "#### Historical Performance")
@@ -490,6 +497,12 @@ def display_financials(
             st.markdown("\n".join(rows))
             if is_japan:
                 st.caption("※ 有価証券報告書等に基づく大株主情報（株探調べ）")
+    elif is_japan:
+        kabutan_holder_url = f"https://kabutan.jp/stock/holder?code={ticker[:-2]}" if ticker else "https://kabutan.jp/"
+        st.info(
+            f"大株主データは現在取得できません。[株探で直接確認する]({kabutan_holder_url})" if ja
+            else f"Major shareholder data is currently unavailable. [Check it directly on Kabutan]({kabutan_holder_url})"
+        )
 
     # 関連リンク（四季報・株価情報サイトなど）
     links = get_external_links(ticker, info, is_japan) if ticker else []
