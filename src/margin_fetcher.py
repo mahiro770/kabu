@@ -1,5 +1,14 @@
+import sys
+
 import requests
 from bs4 import BeautifulSoup
+
+
+def _debug(msg: str) -> None:
+    # TODO(diagnostic, remove after investigating): print()だけだとクラウド環境の
+    # ログにバッファリングされて出てこないことがあるため、flush + stderrの両方に出す。
+    print(msg, flush=True)
+    print(msg, file=sys.stderr, flush=True)
 
 HEADERS = {
     "User-Agent": (
@@ -13,6 +22,7 @@ HEADERS = {
 
 def get_margin_trading_history(ticker: str, weeks: int = 5) -> list[dict]:
     """信用取引残高（買い残・売り残・倍率、週次）を直近weeks件、株探から取得する（日本株のみ）。"""
+    _debug(f"[margin_fetcher DEBUG] called with ticker={ticker!r}")
     if not ticker.endswith(".T"):
         return []
     code = ticker[:-2]
@@ -23,9 +33,7 @@ def get_margin_trading_history(ticker: str, weeks: int = 5) -> list[dict]:
 
         header = soup.find("h2", string=lambda s: s and "信用取引" in s)
         if header is None:
-            # TODO(diagnostic, remove after investigating): 本番環境でこのセクションが
-            # 消える原因（IPブロック/CAPTCHA/構造変化）を切り分けるための一時ログ。
-            print(
+            _debug(
                 f"[margin_fetcher DEBUG] ({ticker}) status={resp.status_code} "
                 f"len={len(resp.text)} title_snippet={soup.title.get_text(strip=True) if soup.title else 'N/A'} "
                 f"body_snippet={resp.text[:300]!r}"
@@ -54,7 +62,7 @@ def get_margin_trading_history(ticker: str, weeks: int = 5) -> list[dict]:
             })
         return history
     except Exception as e:
-        print(f"信用取引データ取得エラー ({ticker}): {type(e).__name__}: {e}")
+        _debug(f"信用取引データ取得エラー ({ticker}): {type(e).__name__}: {e}")
         return []
 
 
