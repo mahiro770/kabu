@@ -69,19 +69,25 @@ def build_watchlist_line_chart(close: pd.Series, color: str, intraday: bool = Fa
 
 
 def build_sidebar_sparkline(close: pd.Series, color: str) -> go.Figure:
-    """サイドバーの簡易ウォッチリスト用の軸なしミニチャート。"""
+    """サイドバーの簡易ウォッチリスト用の日付軸・価格帯付きミニチャート。"""
     fig = go.Figure(go.Scatter(
         x=close.index, y=close.values, mode="lines", line=dict(color=color, width=1.5),
-        hoverinfo="skip",
+        hovertemplate="%{x|%m/%d}<br>%{y:,.1f}<extra></extra>",
     ))
     fig.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        height=36,
+        margin=dict(l=0, r=36, t=4, b=18),
+        height=54,
         showlegend=False,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(visible=False, fixedrange=True),
-        yaxis=dict(visible=False, fixedrange=True),
+        xaxis=dict(
+            visible=True, showgrid=False, tickformat="%m/%d", nticks=3,
+            tickfont=dict(size=9, color="#9ca3af"), fixedrange=True,
+        ),
+        yaxis=dict(
+            visible=True, side="right", showgrid=True, gridcolor="rgba(255,255,255,0.08)",
+            griddash="dash", nticks=3, tickfont=dict(size=9, color="#9ca3af"), fixedrange=True,
+        ),
     )
     return fig
 
