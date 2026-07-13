@@ -82,7 +82,7 @@ def build_sidebar_sparkline(close: pd.Series, color: str) -> go.Figure:
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(
             visible=True, showgrid=False, tickformat="%m/%d", nticks=3,
-            tickfont=dict(size=9, color="#9ca3af"), fixedrange=True,
+            tickfont=dict(size=9, color="#ffffff"), fixedrange=True,
         ),
         yaxis=dict(
             visible=True, side="right", showgrid=True, gridcolor="rgba(255,255,255,0.08)",
