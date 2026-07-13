@@ -68,6 +68,24 @@ def build_watchlist_line_chart(close: pd.Series, color: str, intraday: bool = Fa
     return fig
 
 
+def build_sidebar_sparkline(close: pd.Series, color: str) -> go.Figure:
+    """サイドバーの簡易ウォッチリスト用の軸なしミニチャート。"""
+    fig = go.Figure(go.Scatter(
+        x=close.index, y=close.values, mode="lines", line=dict(color=color, width=1.5),
+        hoverinfo="skip",
+    ))
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=36,
+        showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(visible=False, fixedrange=True),
+        yaxis=dict(visible=False, fixedrange=True),
+    )
+    return fig
+
+
 def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure:
     fig = make_subplots(
         rows=2, cols=1,

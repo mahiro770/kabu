@@ -14,7 +14,7 @@ from src.stock_search import search_stock
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
 from src.chart_builder import (
     build_price_chart, build_rsi_chart, build_macd_chart, build_comparison_chart,
-    build_adx_chart, build_obv_chart,
+    build_adx_chart, build_obv_chart, build_sidebar_sparkline,
 )
 from src.ai_analyst import analyze_stock_stream, list_model_choices
 from src.watchlist import (
@@ -171,6 +171,21 @@ def _get_financial_tab_data(ticker: str, is_japan: bool):
 
 
 @st.cache_data(show_spinner=False, ttl=300)
+def _get_sidebar_quote(ticker: str) -> dict | None:
+    df = get_stock_data(ticker, "1mo", "1d")
+    if df is None or df.empty:
+        return None
+    close = df["close"].dropna()
+    if close.empty:
+        return None
+    current = close.iloc[-1]
+    prev = close.iloc[-2] if len(close) > 1 else current
+    change = current - prev
+    change_pct = (change / prev * 100) if prev else 0.0
+    return {"close": close, "current": current, "change": change, "change_pct": change_pct}
+
+
+@st.cache_data(show_spinner=False, ttl=300)
 def _resolve_stock(raw: str, period: str = "5d"):
     """入力値をティッカーとして解決し、価格データを取得する。
     ティッカーとして直接取得できなければ、会社名として検索して再試行する。
@@ -230,6 +245,24 @@ def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, u
                     wl.pop(i)
                     save_fn(wl)
                     st.rerun()
+
+            quote = _get_sidebar_quote(wt["ticker"])
+            if quote is not None:
+                currency = "JPY" if wt["ticker"].endswith(".T") else "USD"
+                color = "#7fb69c" if quote["change"] >= 0 else "#c98f89"
+                st.markdown(
+                    f"<div style='font-size:0.8rem; line-height:1.4;'>"
+                    f"{quote['current']:,.0f} {currency} "
+                    f"<span style='color:{color}'>{quote['change']:+,.1f} ({quote['change_pct']:+.2f}%)</span>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+                fig = build_sidebar_sparkline(quote["close"], color)
+                st.plotly_chart(
+                    fig, width="stretch", config={"displayModeBar": False},
+                    key=f"{key_prefix}_spark_{i}", theme=None,
+                )
+            st.divider()
     else:
         st.caption("銘柄を追加してください")
 
