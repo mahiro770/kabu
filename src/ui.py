@@ -147,6 +147,20 @@ h3, h4 {
     border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
+/* Small per-indicator cards (technical signal grid). Same visual language
+   as seccard but tighter padding, since these sit 4-up in a column grid. */
+[class*="st-key-sigcard_"] {
+    border-radius: 12px !important;
+    padding: 0.8rem 0.9rem !important;
+    margin-bottom: 0.9rem;
+    background: #212529 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    transition: border-color 0.15s ease;
+}
+[class*="st-key-sigcard_"]:hover {
+    border-color: rgba(138, 173, 148, 0.35) !important;
+}
+
 /* Radio groups styled as pill chips (period / folder selectors).
    Streamlit has changed the internal radio-option markup across versions
    (BaseWeb "label[data-baseweb=radio]" in older releases, the "stRadioOption"

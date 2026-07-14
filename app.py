@@ -743,8 +743,9 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
                 (sc8, "VWAP", "vwap"),
             ]:
                 sig = signals.get(key, "中立")
-                col.markdown(f"**{label}**")
-                col.markdown(signal_badge(sig), unsafe_allow_html=True)
+                with col.container(border=True, key=f"sigcard_{key}"):
+                    st.markdown(f"**{label}**")
+                    st.markdown(signal_badge(sig), unsafe_allow_html=True)
 
             # 日経平均／S&P500 比較
             st.markdown(f"#### {index_name}との比較")
