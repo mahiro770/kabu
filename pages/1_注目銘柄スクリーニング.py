@@ -18,7 +18,14 @@ st.caption("経済ニュースの見出しをAIが分析し、翌営業日以降
 with st.sidebar:
     st.markdown("## ⚙️ 設定")
     available_models = list_model_choices()
-    model_label = lambda c: f"✨ {c.name} (Gemini)" if c.provider == "gemini" else f"🦙 {c.name}"
+
+    def model_label(c):
+        if c.provider == "gemini":
+            return f"✨ {c.name} (Gemini)"
+        if c.provider == "groq":
+            return f"⚡ {c.name} (Groq)"
+        return f"🦙 {c.name}"
+
     selected_models = st.multiselect(
         "AIモデル（複数選択で比較可能）", available_models,
         default=available_models[:1],

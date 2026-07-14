@@ -6,6 +6,7 @@ from typing import Generator
 
 from src.ai_analyst import ModelChoice
 from src.gemini_client import stream_gemini
+from src.groq_client import stream_groq
 
 
 def build_screening_prompt(news_items: list[dict]) -> str:
@@ -45,6 +46,13 @@ def screen_stocks_stream(news_items: list[dict], model: ModelChoice) -> Generato
             yield from stream_gemini(prompt, model.name)
         except Exception as e:
             yield f"\n\n**エラーが発生しました**\n\n```\n{e}\n```\n\nGemini APIキー（.envのGEMINI_API_KEY）が正しく設定されているか確認してください。"
+        return
+
+    if model.provider == "groq":
+        try:
+            yield from stream_groq(prompt, model.name)
+        except Exception as e:
+            yield f"\n\n**エラーが発生しました**\n\n```\n{e}\n```\n\nGroq APIキー（.envのGROQ_API_KEY）が正しく設定されているか確認してください。"
         return
 
     try:

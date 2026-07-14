@@ -625,10 +625,17 @@ with st.sidebar:
     st.divider()
     st.markdown("## ⚙️ 設定")
 
+    def _format_model_choice(c):
+        if c.provider == "gemini":
+            return f"✨ {c.name} (Gemini)"
+        if c.provider == "groq":
+            return f"⚡ {c.name} (Groq)"
+        return f"🦙 {c.name}"
+
     selected_model = st.selectbox(
         "AIモデル",
         list_model_choices(),
-        format_func=lambda c: f"✨ {c.name} (Gemini)" if c.provider == "gemini" else f"🦙 {c.name}",
+        format_func=_format_model_choice,
     )
 
     lang = st.radio("表示言語", ["日本語", "English"], horizontal=True)

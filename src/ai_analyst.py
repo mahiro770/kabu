@@ -3,10 +3,11 @@ import ollama
 from typing import Generator, NamedTuple
 
 from src.gemini_client import GEMINI_MODELS, is_available as gemini_available, stream_gemini
+from src.groq_client import GROQ_MODELS, is_available as groq_available, stream_groq
 
 
 class ModelChoice(NamedTuple):
-    provider: str  # "ollama" or "gemini"
+    provider: str  # "ollama", "gemini", or "groq"
     name: str
 
 
@@ -32,6 +33,8 @@ def list_model_choices() -> list[ModelChoice]:
         choices += [ModelChoice("ollama", m) for m in list_ollama_models()]
     if gemini_available():
         choices += [ModelChoice("gemini", m) for m in GEMINI_MODELS]
+    if groq_available():
+        choices += [ModelChoice("groq", m) for m in GROQ_MODELS]
     return choices
 
 
@@ -167,6 +170,13 @@ def analyze_stock_stream(
             yield from stream_gemini(prompt, model.name)
         except Exception as e:
             yield f"\n\n**エラーが発生しました**\n\n```\n{e}\n```\n\nGemini APIキー（.envのGEMINI_API_KEY）が正しく設定されているか確認してください。"
+        return
+
+    if model.provider == "groq":
+        try:
+            yield from stream_groq(prompt, model.name)
+        except Exception as e:
+            yield f"\n\n**エラーが発生しました**\n\n```\n{e}\n```\n\nGroq APIキー（.envのGROQ_API_KEY）が正しく設定されているか確認してください。"
         return
 
     try:
