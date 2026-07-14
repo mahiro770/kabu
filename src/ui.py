@@ -2,53 +2,57 @@ import streamlit as st
 
 _CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
 html, body, [class*="css"] {
-    font-family: 'Inter', 'Noto Sans JP', sans-serif;
+    font-family: 'Noto Sans JP', sans-serif;
 }
 
 .stApp {
-    background: radial-gradient(circle at 15% -10%, #1a2130 0%, #0a0d15 45%) fixed;
+    background: #1b1e21;
 }
 
 .block-container { padding-top: 2.2rem; padding-bottom: 3rem; }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
-    background: #0e131c;
-    border-right: 1px solid rgba(148, 163, 184, 0.12);
+    background: #17191c;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Headings */
+/* Headings — mincho serif for a calmer, more grown-up tone.
+   !important is required here: Streamlit emits its own class-scoped heading
+   rule (e.g. ".st-emotion-cache-XXXX h1") which outranks a bare "h1" selector
+   on specificity regardless of source order. */
 h1 {
-    font-weight: 700;
-    font-size: 2.6rem;
-    letter-spacing: -0.01em;
-    background: linear-gradient(90deg, #8fb4b0, #c7d1d9);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    width: fit-content;
+    font-family: 'Shippori Mincho', serif !important;
+    font-weight: 600 !important;
+    font-size: 2.3rem !important;
+    letter-spacing: 0.01em;
+    color: #eae7e0 !important;
 }
-h3, h4 { color: #d8dde3; margin-top: 0.4rem; margin-bottom: 1rem; }
+h3, h4 {
+    font-family: 'Shippori Mincho', serif !important;
+    font-weight: 600 !important;
+    color: #eae7e0 !important;
+    margin-top: 0.4rem;
+    margin-bottom: 1rem;
+}
 
 /* Metric cards */
 [data-testid="stMetric"] {
-    background: linear-gradient(160deg, #161c26, #0f131b);
-    border: 1px solid rgba(148, 163, 184, 0.16);
-    border-radius: 14px;
+    background: #212529;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
     padding: 1rem 1.1rem;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    transition: border-color 0.15s ease, transform 0.15s ease;
 }
 [data-testid="stMetric"]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    border-color: rgba(111, 165, 168, 0.4);
+    transform: translateY(-1px);
+    border-color: rgba(138, 173, 148, 0.45);
 }
-[data-testid="stMetricLabel"] { color: #9ca3af; }
-[data-testid="stMetricValue"] { color: #e5e9ed; }
+[data-testid="stMetricLabel"] { color: #97958d; }
+[data-testid="stMetricValue"] { color: #eae7e0; }
 /* Long values (e.g. "33.51兆円", "-59 (-2.04%)") wrap onto a second line
    instead of truncating with an ellipsis — never hide the actual number.
    The truncation styles are set on the innermost <p>, not on stMetricValue
@@ -64,18 +68,22 @@ h3, h4 { color: #d8dde3; margin-top: 0.4rem; margin-bottom: 1rem; }
     line-height: 1.2;
 }
 
-/* Primary buttons */
+/* Primary buttons.
+   !important on background/border: Streamlit re-injects its own themed
+   button rule (using the config.toml primaryColor) on every script rerun,
+   and that fresh rule can land later in the stylesheet than ours, winning
+   the cascade at equal specificity — same root cause as the h1 override above. */
 [data-testid="stBaseButton-primary"] {
-    background: linear-gradient(90deg, #3d6b70, #2c4d52);
-    border: none;
+    background: #3a4a3d !important;
+    border: 1px solid rgba(138, 173, 148, 0.4) !important;
     border-radius: 10px;
     padding: 0.6rem 1.5rem;
     font-size: 1.02rem;
-    box-shadow: 0 0 0 rgba(111, 165, 168, 0);
+    box-shadow: none;
     transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 [data-testid="stBaseButton-primary"]:hover {
-    box-shadow: 0 0 14px rgba(111, 165, 168, 0.4);
+    box-shadow: 0 0 0 3px rgba(138, 173, 148, 0.18);
     transform: translateY(-1px);
 }
 
@@ -86,21 +94,22 @@ h3, h4 { color: #d8dde3; margin-top: 0.4rem; margin-bottom: 1rem; }
     transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 [data-testid="stBaseButton-secondary"]:hover {
-    border-color: rgba(111, 165, 168, 0.55);
-    box-shadow: 0 0 10px rgba(111, 165, 168, 0.2);
+    border-color: rgba(138, 173, 148, 0.5);
+    box-shadow: 0 0 0 3px rgba(138, 173, 148, 0.12);
     transform: translateY(-1px);
 }
 
 /* Tabs */
 [data-testid="stTabs"] button {
+    font-weight: 600;
     transition: color 0.15s ease, border-color 0.15s ease;
 }
 [data-testid="stTabs"] button[aria-selected="true"] {
-    color: #8fb4b0 !important;
-    border-bottom-color: #8fb4b0 !important;
+    color: #8aad94 !important;
+    border-bottom-color: #8aad94 !important;
 }
 [data-testid="stTabs"] button[aria-selected="false"]:hover {
-    color: #a9b6bd !important;
+    color: #b7b4ac !important;
 }
 
 /* Expander */
@@ -110,33 +119,32 @@ h3, h4 { color: #d8dde3; margin-top: 0.4rem; margin-bottom: 1rem; }
     transition: border-color 0.15s ease;
 }
 [data-testid="stExpander"]:hover {
-    border-color: rgba(111, 165, 168, 0.3);
+    border-color: rgba(138, 173, 148, 0.35);
 }
 
 /* Bordered containers used as cards (e.g. watchlist rows).
    Streamlit adds a "st-key-<key>" class to containers created with an explicit
    key= — used here instead of internal testids, which vary between versions. */
 [class*="st-key-wlcard_"] {
-    border-radius: 14px !important;
+    border-radius: 12px !important;
     margin-bottom: 0.9rem;
-    background: linear-gradient(160deg, rgba(22, 28, 38, 0.6), rgba(15, 19, 27, 0.6)) !important;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    background: #212529 !important;
+    transition: border-color 0.15s ease, transform 0.15s ease;
 }
 [class*="st-key-wlcard_"]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
-    border-color: rgba(111, 165, 168, 0.4) !important;
+    transform: translateY(-1px);
+    border-color: rgba(138, 173, 148, 0.4) !important;
 }
 
 /* Static section cards — used to group related content (financial metric
    groups, AI report output, usage guides) into visually distinct blocks.
    Unlike wlcard, these aren't clickable, so no hover lift. */
 [class*="st-key-seccard_"] {
-    border-radius: 16px !important;
+    border-radius: 14px !important;
     padding: 1.3rem 1.5rem !important;
     margin-bottom: 1.6rem;
-    background: linear-gradient(160deg, rgba(19, 25, 34, 0.55), rgba(14, 18, 25, 0.55)) !important;
-    border-color: rgba(148, 163, 184, 0.14) !important;
+    background: #212529 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Radio groups styled as pill chips (period / folder selectors).
@@ -145,8 +153,8 @@ h3, h4 { color: #d8dde3; margin-top: 0.4rem; margin-bottom: 1rem; }
    testid in newer ones) — both selectors are kept so this works either way. */
 [data-testid="stRadio"] label[data-baseweb="radio"],
 [data-testid="stRadioOption"] {
-    background: rgba(111, 165, 168, 0.06);
-    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(138, 173, 148, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 999px;
     padding: 0.25rem 0.9rem;
     margin-right: 0.3rem;
@@ -154,14 +162,14 @@ h3, h4 { color: #d8dde3; margin-top: 0.4rem; margin-bottom: 1rem; }
 }
 [data-testid="stRadio"] label[data-baseweb="radio"]:hover,
 [data-testid="stRadioOption"]:hover {
-    background: rgba(111, 165, 168, 0.14);
-    border-color: rgba(111, 165, 168, 0.5);
+    background: rgba(138, 173, 148, 0.12);
+    border-color: rgba(138, 173, 148, 0.5);
     transform: translateY(-1px);
 }
 [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked),
 [data-testid="stRadioOption"][data-selected="true"] {
-    background: linear-gradient(90deg, rgba(111, 165, 168, 0.22), rgba(148, 163, 184, 0.14));
-    border-color: rgba(111, 165, 168, 0.55);
+    background: rgba(138, 173, 148, 0.2);
+    border-color: rgba(138, 173, 148, 0.55);
 }
 
 /* Text inputs / text areas */
@@ -169,8 +177,8 @@ h3, h4 { color: #d8dde3; margin-top: 0.4rem; margin-bottom: 1rem; }
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 [data-testid="stTextInput"] input:focus, [data-testid="stTextArea"] textarea:focus {
-    border-color: rgba(111, 165, 168, 0.55) !important;
-    box-shadow: 0 0 0 1px rgba(111, 165, 168, 0.28);
+    border-color: rgba(138, 173, 148, 0.55) !important;
+    box-shadow: 0 0 0 1px rgba(138, 173, 148, 0.28);
 }
 
 hr { border-color: rgba(255, 255, 255, 0.08); }
@@ -183,14 +191,14 @@ hr { border-color: rgba(255, 255, 255, 0.08); }
     font-weight: 700;
     font-size: 0.95rem;
 }
-.signal-buy { color: #7fb69c; background: rgba(127, 182, 156, 0.12); }
-.signal-sell { color: #c98f89; background: rgba(201, 143, 137, 0.12); }
-.signal-neutral { color: #c9a76d; background: rgba(201, 167, 109, 0.12); }
+.signal-buy { color: #8aad94; background: rgba(138, 173, 148, 0.12); }
+.signal-sell { color: #b98a7d; background: rgba(185, 138, 125, 0.12); }
+.signal-neutral { color: #c2a873; background: rgba(194, 168, 115, 0.12); }
 
-.fin-label { font-size: 0.8rem; color: #9ca3af; }
+.fin-label { font-size: 0.8rem; color: #97958d; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: rgba(111, 165, 168, 0.35); border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(138, 173, 148, 0.35); border-radius: 8px; }
 </style>
 """
 
