@@ -198,6 +198,55 @@ def get_signals(df: pd.DataFrame) -> dict:
     return signals
 
 
+CANDLESTICK_PATTERN_KEYS = [
+    "bullish_marubozu", "bearish_marubozu", "doji",
+    "hammer", "hanging_man", "bullish_engulfing", "bearish_engulfing",
+]
+
+
+def detect_candlestick_patterns(df: pd.DataFrame) -> dict:
+    """直近1本のローソク足に、代表的なローソク足パターンが出現しているかを判定する。
+    trueになっているキーが1つもない場合は「該当パターンなし」を意味する。"""
+    result = {key: False for key in CANDLESTICK_PATTERN_KEYS}
+    if len(df) < 7:
+        return result
+
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+    o, h, l, c = last["open"], last["high"], last["low"], last["close"]
+    po, pc = prev["open"], prev["close"]
+
+    rng = h - l
+    if rng <= 0 or any(pd.isna(v) for v in (o, h, l, c, po, pc)):
+        return result
+
+    body = abs(c - o)
+    upper_wick = h - max(o, c)
+    lower_wick = min(o, c) - l
+    is_bullish = c > o
+    is_bearish = c < o
+
+    result["bullish_marubozu"] = is_bullish and body >= 0.9 * rng
+    result["bearish_marubozu"] = is_bearish and body >= 0.9 * rng
+    result["doji"] = body <= 0.1 * rng
+
+    # 直近5本の値動きでトレンド方向を判定し、同じ形でも
+    # 下降トレンド後なら「ハンマー」、上昇トレンド後なら「首吊り線」と区別する
+    prior_trend = df["close"].iloc[-2] - df["close"].iloc[-7]
+    is_small_body_bottom = body > 0 and lower_wick >= 2 * body and upper_wick <= 0.3 * body
+    if is_small_body_bottom and prior_trend < 0:
+        result["hammer"] = True
+    if is_small_body_bottom and prior_trend > 0:
+        result["hanging_man"] = True
+
+    prev_is_bearish = pc < po
+    prev_is_bullish = pc > po
+    result["bullish_engulfing"] = is_bullish and prev_is_bearish and o <= pc and c >= po
+    result["bearish_engulfing"] = is_bearish and prev_is_bullish and o >= pc and c <= po
+
+    return result
+
+
 def get_summary_stats(df: pd.DataFrame, info: dict) -> dict:
     stats = {}
     current = df["close"].iloc[-1]

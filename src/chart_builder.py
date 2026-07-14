@@ -92,6 +92,89 @@ def build_sidebar_sparkline(close: pd.Series, color: str) -> go.Figure:
     return fig
 
 
+_PATTERN_LAYOUT = dict(
+    margin=dict(l=8, r=8, t=8, b=8),
+    height=180,
+    showlegend=True,
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
+                font=dict(size=10, color="#9ca3af")),
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    xaxis=dict(visible=False, fixedrange=True),
+    yaxis=dict(visible=False, fixedrange=True),
+)
+
+
+def build_pattern_example_chart(data: dict) -> go.Figure:
+    """チャート学習ページ用の、指標パターンの見た目を伝えるための簡易ライン図。"""
+    kind = data["kind"]
+    x = data["x"]
+
+    if kind == "dual_line":
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x, y=data["primary"], mode="lines", name=data["primary_name"],
+                                  line=dict(color="#8aad94", width=2)))
+        fig.add_trace(go.Scatter(x=x, y=data["secondary"], mode="lines", name=data["secondary_name"],
+                                  line=dict(color="#b7b4ac", width=1.5, dash="dot")))
+        fig.update_layout(**_PATTERN_LAYOUT)
+        return fig
+
+    if kind == "oscillator":
+        fig = go.Figure()
+        fig.add_hrect(y0=0, y1=data["zone_low"], fillcolor="rgba(138,173,148,0.12)", line_width=0)
+        fig.add_hrect(y0=data["zone_high"], y1=100, fillcolor="rgba(185,138,125,0.12)", line_width=0)
+        fig.add_trace(go.Scatter(x=x, y=data["primary"], mode="lines", name=data["primary_name"],
+                                  line=dict(color="#8aad94", width=2)))
+        fig.update_layout(**_PATTERN_LAYOUT)
+        fig.update_yaxes(range=[0, 100])
+        return fig
+
+    if kind == "band":
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x, y=data["band_upper"], mode="lines", line=dict(width=0),
+                                  showlegend=False, hoverinfo="skip"))
+        fig.add_trace(go.Scatter(x=x, y=data["band_lower"], mode="lines", line=dict(width=0),
+                                  fill="tonexty", fillcolor="rgba(138,173,148,0.15)",
+                                  name=data["band_name"], hoverinfo="skip"))
+        fig.add_trace(go.Scatter(x=x, y=data["primary"], mode="lines", name=data["primary_name"],
+                                  line=dict(color="#eae7e0", width=2)))
+        fig.update_layout(**_PATTERN_LAYOUT)
+        return fig
+
+    if kind == "adx":
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x, y=data["adx"], mode="lines", name="ADX",
+                                  line=dict(color="#eae7e0", width=2)))
+        fig.add_trace(go.Scatter(x=x, y=data["plus_di"], mode="lines", name="+DI",
+                                  line=dict(color="#8aad94", width=1.5, dash="dot")))
+        fig.add_trace(go.Scatter(x=x, y=data["minus_di"], mode="lines", name="-DI",
+                                  line=dict(color="#b98a7d", width=1.5, dash="dot")))
+        fig.add_hline(y=25, line=dict(color="rgba(255,255,255,0.25)", width=1, dash="dash"))
+        fig.update_layout(**_PATTERN_LAYOUT)
+        return fig
+
+    raise ValueError(f"unknown pattern chart kind: {kind}")
+
+
+def build_pattern_candlestick_chart(df: pd.DataFrame) -> go.Figure:
+    """チャート学習ページ用の、ローソク足パターンの見た目を伝えるための簡易ローソク足図。"""
+    fig = go.Figure(go.Candlestick(
+        x=df.index, open=df["open"], high=df["high"], low=df["low"], close=df["close"],
+        increasing_line_color="#8aad94", decreasing_line_color="#b98a7d",
+        increasing_fillcolor="#8aad94", decreasing_fillcolor="#b98a7d",
+    ))
+    fig.update_layout(
+        margin=dict(l=8, r=8, t=8, b=8),
+        height=180,
+        showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(visible=False, fixedrange=True, rangeslider=dict(visible=False)),
+        yaxis=dict(visible=False, fixedrange=True),
+    )
+    return fig
+
+
 def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure:
     fig = make_subplots(
         rows=2, cols=1,
