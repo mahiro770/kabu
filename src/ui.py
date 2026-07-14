@@ -152,7 +152,7 @@ h3, h4 {
 [class*="st-key-sigcard_"] {
     border-radius: 12px !important;
     padding: 0.8rem 0.9rem !important;
-    margin-bottom: 0.9rem;
+    margin: 0 0.6rem 0.9rem 0 !important;
     background: #212529 !important;
     border-color: rgba(255, 255, 255, 0.08) !important;
     transition: border-color 0.15s ease;
