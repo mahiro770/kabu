@@ -26,6 +26,7 @@ from src.watchlist import (
 )
 from src.ui import inject_theme
 from src.sectors import SECTOR_JA
+from src.translate import translate_name_to_ja
 
 inject_theme()
 
@@ -59,15 +60,6 @@ def _has_japanese(text: str) -> bool:
     return any('぀' <= c <= 'ヿ' or '一' <= c <= '鿿' for c in text)
 
 
-@st.cache_data(show_spinner=False, ttl=86400)
-def _translate_name_to_ja(name: str) -> str:
-    try:
-        from deep_translator import GoogleTranslator
-        return GoogleTranslator(source="en", target="ja").translate(name)
-    except Exception:
-        return name
-
-
 def get_display_name(info: dict, lang: str, is_japan: bool = False) -> str:
     long_ = info.get("longName") or info.get("shortName") or ""
     if lang == "日本語":
@@ -78,7 +70,7 @@ def get_display_name(info: dict, lang: str, is_japan: bool = False) -> str:
             return long_
         # 日本株は社名を翻訳して取得
         if is_japan and long_:
-            return _translate_name_to_ja(long_)
+            return translate_name_to_ja(long_)
     return long_
 
 

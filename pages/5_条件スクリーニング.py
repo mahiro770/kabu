@@ -2,7 +2,12 @@ import streamlit as st
 
 from src.fundamental_screener import screen_stocks
 from src.sectors import SECTOR_JA
+from src.translate import translate_names_to_ja_parallel
 from src.ui import inject_theme
+
+
+def _has_japanese(text: str) -> bool:
+    return any('぀' <= c <= 'ヿ' or '一' <= c <= '鿿' for c in text)
 
 st.set_page_config(
     page_title="条件スクリーニング",
@@ -60,7 +65,7 @@ with st.container(border=True, key="seccard_screen_filters"):
 
 if search_btn:
     with st.spinner("検索中..."):
-        st.session_state.screen_result = screen_stocks(
+        screen_result = screen_stocks(
             region=region,
             market_cap_min=mcap_min_val * 1e8 if mcap_min_val > 0 else None,
             market_cap_max=mcap_max_val * 1e8 if mcap_max_val > 0 else None,
@@ -77,8 +82,24 @@ if search_btn:
             sector_ja=None if sector_ja == "指定なし" else sector_ja,
             size=50,
         )
-        st.session_state.screen_currency = "JPY" if region == "jp" else "USD"
-        st.session_state.screen_unit = unit
+
+    # 日本株の会社名は英語表記のことが多いため、日本語に翻訳する。
+    # 1件ずつ翻訳すると件数分のHTTPリクエストが直列化して遅いため並列化する。
+    names = {
+        q.get("symbol", ""): q.get("shortName", q.get("symbol", "")).strip()
+        for q in screen_result["quotes"]
+    }
+    if region == "jp":
+        to_translate = {sym: n for sym, n in names.items() if not _has_japanese(n)}
+        if to_translate:
+            with st.spinner("会社名を日本語に翻訳中..."):
+                translated = translate_names_to_ja_parallel(list(to_translate.values()))
+                names.update(zip(to_translate.keys(), translated))
+
+    st.session_state.screen_result = screen_result
+    st.session_state.screen_names = names
+    st.session_state.screen_currency = "JPY" if region == "jp" else "USD"
+    st.session_state.screen_unit = unit
 
 # 検索結果はsession_stateで保持し、結果内の「分析」ボタン押下によるrerunでも
 # 消えないようにする（st.button()のTrueは押した直後の1回のrerunでしか続かない）
@@ -91,9 +112,10 @@ if result is not None:
         st.markdown(f"### 該当 {result['total']:,} 銘柄中、上位{len(quotes)}件（時価総額順）")
         currency = st.session_state.screen_currency
         result_unit = st.session_state.screen_unit
+        names = st.session_state.screen_names
         for q in quotes:
             symbol = q.get("symbol", "")
-            name = q.get("shortName", symbol).strip()
+            name = names.get(symbol, symbol)
             mcap = q.get("marketCap")
             per = q.get("trailingPE")
             pbr = q.get("priceToBook")
