@@ -10,6 +10,7 @@ st.set_page_config(
 from src.data_fetcher import get_stock_data, get_stock_info, get_financial_history, get_earnings_forecast, get_major_holders
 from src.margin_fetcher import get_margin_trading_history
 from src.holder_fetcher import get_major_shareholders_jp
+from src.pts_fetcher import get_pts_price
 from src.stock_search import search_stock
 from src.technical_analysis import add_indicators, get_signals, get_summary_stats
 from src.chart_builder import (
@@ -159,6 +160,11 @@ def _normalize_ticker(t: str) -> str:
 @st.cache_data(show_spinner=False, ttl=300)
 def _cached_stock_data(ticker: str, period: str):
     return get_stock_data(ticker, period)
+
+
+@st.cache_data(show_spinner=False, ttl=60)
+def _get_pts_price(ticker: str):
+    return get_pts_price(ticker)
 
 
 @st.cache_data(show_spinner=False, ttl=300)
@@ -705,6 +711,16 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
             c_price, c_signal = st.columns([3, 1])
             c_price.metric("現在値", f"{current:,.0f} {currency}",
                             f"{change:+,.0f} ({change_pct:+.2f}%)")
+            if is_japan:
+                pts = _get_pts_price(ticker)
+                if pts is not None:
+                    if pts.get("change") is not None and pts.get("change_pct") is not None:
+                        c_price.caption(
+                            f"夜間PTS: {pts['price']:,.0f} {currency}"
+                            f"（{pts['change']:+,.0f} / {pts['change_pct']:+.2f}%）"
+                        )
+                    else:
+                        c_price.caption(f"夜間PTS: {pts['price']:,.0f} {currency}")
             overall = signals.get("overall", "中立")
             badge_html = signal_badge(overall)
             c_signal.markdown("**総合シグナル**")
