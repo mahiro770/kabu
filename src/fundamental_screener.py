@@ -29,13 +29,17 @@ def screen_stocks(
     per_max: float | None = None,
     roe_min: float | None = None,
     roe_max: float | None = None,
+    pbr_min: float | None = None,
+    pbr_max: float | None = None,
+    div_yield_min: float | None = None,
+    div_yield_max: float | None = None,
     sector_ja: str | None = None,
     size: int = 50,
 ) -> dict:
     """yfinanceの公式スクリーニングAPI（Yahoo!ファイナンスの正規データ）で、
-    地域・時価総額・売上高・PER・ROE・セクターの条件に合う銘柄を検索する。
-    スクレイピングではないため、株探/IR BANK等のようなボット判定ブロックの
-    心配がない。戻り値は {"total": 該当件数, "quotes": [...]}。"""
+    地域・時価総額・売上高・PER・ROE・PBR・配当利回り・セクターの条件に合う
+    銘柄を検索する。スクレイピングではないため、株探/IR BANK等のような
+    ボット判定ブロックの心配がない。戻り値は {"total": 該当件数, "quotes": [...]}。"""
     conditions = [EquityQuery("eq", ["region", region])]
 
     if market_cap_min is not None:
@@ -54,6 +58,14 @@ def screen_stocks(
         conditions.append(EquityQuery("gt", ["returnonequity.lasttwelvemonths", roe_min]))
     if roe_max is not None:
         conditions.append(EquityQuery("lt", ["returnonequity.lasttwelvemonths", roe_max]))
+    if pbr_min is not None:
+        conditions.append(EquityQuery("gt", ["pricebookratio.quarterly", pbr_min]))
+    if pbr_max is not None:
+        conditions.append(EquityQuery("lt", ["pricebookratio.quarterly", pbr_max]))
+    if div_yield_min is not None:
+        conditions.append(EquityQuery("gt", ["forward_dividend_yield", div_yield_min]))
+    if div_yield_max is not None:
+        conditions.append(EquityQuery("lt", ["forward_dividend_yield", div_yield_max]))
     if sector_ja:
         sector_en = SECTOR_EN.get(sector_ja)
         if sector_en:

@@ -13,43 +13,48 @@ inject_theme()
 
 st.markdown("# 🔎 条件スクリーニング")
 st.caption(
-    "時価総額・売上高・PER・ROE・セクターなどの条件で銘柄を検索します。"
+    "時価総額・売上高・PER・ROE・PBR・配当利回り・セクターなどの条件で銘柄を検索します。"
     "Yahoo!ファイナンスの公式データを使うため、中小型株も含めて幅広く検索できます。"
 )
 
 if "current_ticker" not in st.session_state:
     st.session_state.current_ticker = ""
 
+
+def _filter_box(label: str, key_prefix: str, step: float = 1.0, help_zero: str = "上限（0で上限なし）"):
+    with st.container(border=True, key=f"sigcard_filter_{key_prefix}"):
+        st.markdown(f"**{label}**")
+        c_min, c_max = st.columns(2)
+        min_val = c_min.number_input("下限", value=0.0, step=step, key=f"{key_prefix}_min")
+        max_val = c_max.number_input(help_zero, value=0.0, step=step, key=f"{key_prefix}_max")
+    return min_val, max_val
+
+
 with st.container(border=True, key="seccard_screen_filters"):
     region_label = st.radio("市場", ["日本株", "米国株"], horizontal=True)
     region = "jp" if region_label == "日本株" else "us"
     unit = "億円" if region == "jp" else "億ドル"
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown(f"**時価総額（{unit}）**")
-        mcap_min, mcap_max = st.columns(2)
-        mcap_min_val = mcap_min.number_input("下限", min_value=0.0, value=0.0, step=10.0, key="mcap_min")
-        mcap_max_val = mcap_max.number_input("上限（0で上限なし）", min_value=0.0, value=0.0, step=10.0, key="mcap_max")
-    with c2:
-        st.markdown(f"**売上高（{unit}）**")
-        rev_min, rev_max = st.columns(2)
-        rev_min_val = rev_min.number_input("下限", min_value=0.0, value=0.0, step=10.0, key="rev_min")
-        rev_max_val = rev_max.number_input("上限（0で上限なし）", min_value=0.0, value=0.0, step=10.0, key="rev_max")
+    row1 = st.columns(3)
+    with row1[0]:
+        mcap_min_val, mcap_max_val = _filter_box(f"時価総額（{unit}）", "mcap", step=10.0)
+    with row1[1]:
+        rev_min_val, rev_max_val = _filter_box(f"売上高（{unit}）", "rev", step=10.0)
+    with row1[2]:
+        per_min_val, per_max_val = _filter_box("PER（倍）", "per", step=1.0)
 
-    c3, c4 = st.columns(2)
-    with c3:
-        st.markdown("**PER（倍）**")
-        per_min, per_max = st.columns(2)
-        per_min_val = per_min.number_input("下限", min_value=0.0, value=0.0, step=1.0, key="per_min")
-        per_max_val = per_max.number_input("上限（0で上限なし）", min_value=0.0, value=0.0, step=1.0, key="per_max")
-    with c4:
-        st.markdown("**ROE（%）**")
-        roe_min, roe_max = st.columns(2)
-        roe_min_val = roe_min.number_input("下限", value=0.0, step=1.0, key="roe_min")
-        roe_max_val = roe_max.number_input("上限（0で上限なし）", value=0.0, step=1.0, key="roe_max")
+    row2 = st.columns(3)
+    with row2[0]:
+        roe_min_val, roe_max_val = _filter_box("ROE（%）", "roe", step=1.0)
+    with row2[1]:
+        pbr_min_val, pbr_max_val = _filter_box("PBR（倍）", "pbr", step=0.1)
+    with row2[2]:
+        div_min_val, div_max_val = _filter_box("配当利回り（%）", "div", step=0.5)
 
-    sector_ja = st.selectbox("セクター（指定なしで全業種）", ["指定なし"] + list(SECTOR_JA.values()))
+    with st.container(border=True, key="sigcard_filter_sector"):
+        st.markdown("**セクター**")
+        sector_ja = st.selectbox("指定なしで全業種", ["指定なし"] + list(SECTOR_JA.values()),
+                                  label_visibility="collapsed")
 
     search_btn = st.button("🔎 検索", type="primary", use_container_width=True)
 
@@ -65,6 +70,10 @@ if search_btn:
             per_max=per_max_val if per_max_val > 0 else None,
             roe_min=roe_min_val if roe_min_val != 0 else None,
             roe_max=roe_max_val if roe_max_val != 0 else None,
+            pbr_min=pbr_min_val if pbr_min_val > 0 else None,
+            pbr_max=pbr_max_val if pbr_max_val > 0 else None,
+            div_yield_min=div_min_val if div_min_val > 0 else None,
+            div_yield_max=div_max_val if div_max_val > 0 else None,
             sector_ja=None if sector_ja == "指定なし" else sector_ja,
             size=50,
         )
@@ -84,23 +93,29 @@ if result is not None:
         result_unit = st.session_state.screen_unit
         for q in quotes:
             symbol = q.get("symbol", "")
-            name = q.get("shortName", symbol)
+            name = q.get("shortName", symbol).strip()
             mcap = q.get("marketCap")
             per = q.get("trailingPE")
+            pbr = q.get("priceToBook")
+            div_yield = q.get("dividendYield")
             price = q.get("regularMarketPrice")
             change_pct = q.get("regularMarketChangePercent")
 
             with st.container(border=True, key=f"sigcard_result_{symbol}"):
-                cols = st.columns([3, 2, 2, 2, 1])
-                cols[0].markdown(f"**{name}**")
-                cols[0].caption(symbol)
-                cols[1].metric(
+                top = st.columns([4, 2, 1])
+                top[0].markdown(f"**{name}**")
+                top[0].caption(symbol)
+                top[1].metric(
                     "現在値",
                     f"{price:,.0f} {currency}" if price is not None else "N/A",
                     f"{change_pct:+.2f}%" if change_pct is not None else None,
                 )
-                cols[2].metric("時価総額", f"{mcap / 1e8:,.0f}{result_unit}" if mcap is not None else "N/A")
-                cols[3].metric("PER", f"{per:.1f}倍" if per is not None else "N/A")
-                if cols[4].button("分析", key=f"jump_{symbol}", use_container_width=True):
+                if top[2].button("分析", key=f"jump_{symbol}", use_container_width=True):
                     st.session_state.current_ticker = symbol
                     st.switch_page("app.py")
+
+                bottom = st.columns(4)
+                bottom[0].metric("時価総額", f"{mcap / 1e8:,.0f}{result_unit}" if mcap is not None else "N/A")
+                bottom[1].metric("PER", f"{per:.1f}倍" if per is not None else "N/A")
+                bottom[2].metric("PBR", f"{pbr:.2f}倍" if pbr is not None else "N/A")
+                bottom[3].metric("配当利回り", f"{div_yield:.2f}%" if div_yield is not None else "N/A")
