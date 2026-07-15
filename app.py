@@ -25,23 +25,9 @@ from src.watchlist import (
     get_community_record, verify_community_passphrase, claim_community_name, reset_community_passphrase,
 )
 from src.ui import inject_theme
+from src.sectors import SECTOR_JA
 
 inject_theme()
-
-# セクター日本語マッピング
-SECTOR_JA = {
-    "Consumer Cyclical": "一般消費財・サービス",
-    "Technology": "情報技術",
-    "Industrials": "資本財・サービス",
-    "Financial Services": "金融サービス",
-    "Healthcare": "ヘルスケア",
-    "Basic Materials": "素材",
-    "Energy": "エネルギー",
-    "Communication Services": "コミュニケーション・サービス",
-    "Real Estate": "不動産",
-    "Consumer Defensive": "生活必需品",
-    "Utilities": "公益事業",
-}
 
 INDUSTRY_JA = {
     "Auto Manufacturers": "自動車メーカー",
