@@ -1,3 +1,5 @@
+import sys
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -33,6 +35,14 @@ def get_pts_price(ticker: str) -> dict | None:
 
         row = soup.select_one('[class*="ptsPriceRow"]')
         if row is None:
+            title = soup.find("title")
+            msg = (
+                f"[pts_fetcher DEBUG] ({ticker}) status={resp.status_code} "
+                f"len={len(resp.text)} title={title.get_text(strip=True) if title else None} "
+                f"body_snippet={resp.text[:300]!r}"
+            )
+            print(msg, flush=True)
+            print(msg, file=sys.stderr, flush=True)
             return None
         price_el = row.select_one('[class*="ptsPrice"] [class*="StyledNumber__value"]')
         if price_el is None:
