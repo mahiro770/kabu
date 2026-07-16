@@ -42,9 +42,9 @@ with st.container(border=True, key="seccard_screen_filters"):
 
     row1 = st.columns(3)
     with row1[0]:
-        mcap_min_val, mcap_max_val = _filter_box(f"時価総額（{unit}）", "mcap", step=10.0)
+        mcap_min_val, mcap_max_val = _filter_box(f"時価総額（{unit}）", "mcap", step=1.0)
     with row1[1]:
-        rev_min_val, rev_max_val = _filter_box(f"売上高（{unit}）", "rev", step=10.0)
+        rev_min_val, rev_max_val = _filter_box(f"売上高（{unit}）", "rev", step=1.0)
     with row1[2]:
         per_min_val, per_max_val = _filter_box("PER（倍）", "per", step=1.0)
 
@@ -52,9 +52,9 @@ with st.container(border=True, key="seccard_screen_filters"):
     with row2[0]:
         roe_min_val, roe_max_val = _filter_box("ROE（%）", "roe", step=1.0)
     with row2[1]:
-        pbr_min_val, pbr_max_val = _filter_box("PBR（倍）", "pbr", step=0.1)
+        pbr_min_val, pbr_max_val = _filter_box("PBR（倍）", "pbr", step=1.0)
     with row2[2]:
-        div_min_val, div_max_val = _filter_box("配当利回り（%）", "div", step=0.5)
+        div_min_val, div_max_val = _filter_box("配当利回り（%）", "div", step=1.0)
 
     with st.container(border=True, key="sigcard_filter_sector"):
         st.markdown("**セクター**")
