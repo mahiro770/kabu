@@ -195,6 +195,17 @@ h3, h4 {
     box-shadow: 0 0 0 1px rgba(138, 173, 148, 0.28);
 }
 
+/* Number inputs (e.g. screening filter min/max fields) */
+[data-testid="stNumberInputContainer"] {
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 10px !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+[data-testid="stNumberInputContainer"]:focus-within {
+    border-color: rgba(138, 173, 148, 0.55) !important;
+    box-shadow: 0 0 0 1px rgba(138, 173, 148, 0.28);
+}
+
 hr { border-color: rgba(255, 255, 255, 0.08); }
 
 /* Signal badges */
