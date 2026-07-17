@@ -263,16 +263,26 @@ def _render_passphrase_reset(name: str, reset_fn, key_prefix: str) -> None:
                 st.warning("新しい合言葉を入力してください。")
 
 
+def _logout(owner_key: str, items_key: str, passphrase_key: str, name_input_key: str) -> None:
+    """ログアウト操作。ボタンのon_clickコールバックとして呼ぶことで、
+    ウィジェットが同じ実行内で再生成される前にsession_stateを安全にクリアできる。"""
+    st.session_state[owner_key] = None
+    st.session_state[items_key] = []
+    st.session_state[passphrase_key] = ""
+    st.session_state[name_input_key] = ""
+
+
 def _render_gated_list(
     owner_key: str, items_key: str, name: str,
     get_record_fn, verify_fn, claim_fn, load_fn, save_fn, reset_fn,
-    key_prefix: str, show_added_by: bool, username: str,
+    key_prefix: str, show_added_by: bool, username: str, name_input_key: str,
     new_name_msg: str, need_passphrase_msg: str, wrong_passphrase_msg: str,
 ) -> None:
     """名前/コミュニティ名 + 合言葉で保護されたリストを描画する（新規登録・照合・表示を共通化）。"""
     record = get_record_fn(name)
+    passphrase_key = f"{key_prefix}_passphrase_input"
     passphrase = st.text_input(
-        "合言葉", type="password", key=f"{key_prefix}_passphrase_input",
+        "合言葉", type="password", key=passphrase_key,
         help="他人が同じ名前を使えないようにするための合言葉です。初めて使うなら自由に決めてください。",
     )
     if record is None:
@@ -295,6 +305,11 @@ def _render_gated_list(
         if st.session_state[owner_key] != name:
             st.session_state[items_key] = load_fn(name)
             st.session_state[owner_key] = name
+
+    st.button(
+        "🚪 ログアウト", key=f"{key_prefix}_logout_btn",
+        on_click=_logout, args=(owner_key, items_key, passphrase_key, name_input_key),
+    )
 
     _render_watchlist(
         st.session_state[items_key],
@@ -587,7 +602,7 @@ with st.sidebar:
                 "community_watchlist_owner", "community_watchlist", community_name,
                 get_community_record, verify_community_passphrase, claim_community_name,
                 load_community_watchlist, save_community_watchlist, reset_community_passphrase,
-                "community", True, username,
+                "community", True, username, "community_name_input",
                 "🆕 新しいコミュニティ名です。合言葉を決めて入力するとメンバーで共有できます。",
                 "🔒 合言葉を入力してください。",
                 "合言葉が違います。コミュニティ名か合言葉を確認してください。",
@@ -600,7 +615,7 @@ with st.sidebar:
                 "personal_watchlist_owner", "personal_watchlist", username,
                 get_personal_record, verify_personal_passphrase, claim_personal_name,
                 load_personal_watchlist, save_personal_watchlist, reset_personal_passphrase,
-                "personal", False, username,
+                "personal", False, username, "username_input",
                 "🆕 初めてのお名前です。合言葉を決めて入力すると個人リストが使えます。",
                 "🔒 合言葉を入力してください。",
                 "合言葉が違います。別のお名前をお使いください。",
