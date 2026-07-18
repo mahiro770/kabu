@@ -4,19 +4,19 @@ import pandas as pd
 import numpy as np
 
 
-def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame) -> None:
+def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame, ja: bool = True) -> None:
     fig.add_trace(
-        go.Scatter(x=df.index, y=df["ichimoku_tenkan"], name="転換線",
+        go.Scatter(x=df.index, y=df["ichimoku_tenkan"], name="転換線" if ja else "Tenkan-sen",
                    line=dict(color="#ef5350", width=1)),
         row=1, col=1,
     )
     fig.add_trace(
-        go.Scatter(x=df.index, y=df["ichimoku_kijun"], name="基準線",
+        go.Scatter(x=df.index, y=df["ichimoku_kijun"], name="基準線" if ja else "Kijun-sen",
                    line=dict(color="#1f77b4", width=1)),
         row=1, col=1,
     )
     fig.add_trace(
-        go.Scatter(x=df.index, y=df["ichimoku_chikou"], name="遅行スパン",
+        go.Scatter(x=df.index, y=df["ichimoku_chikou"], name="遅行スパン" if ja else "Chikou Span",
                    line=dict(color="#9b59b6", width=1, dash="dot")),
         row=1, col=1,
     )
@@ -31,12 +31,12 @@ def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame) -> None:
     senkou_b = senkou_b.reindex(cloud_index)
 
     fig.add_trace(
-        go.Scatter(x=cloud_index, y=senkou_b, name="先行スパンB",
+        go.Scatter(x=cloud_index, y=senkou_b, name="先行スパンB" if ja else "Senkou Span B",
                    line=dict(color="rgba(239,83,80,0.4)", width=1)),
         row=1, col=1,
     )
     fig.add_trace(
-        go.Scatter(x=cloud_index, y=senkou_a, name="先行スパンA（雲）",
+        go.Scatter(x=cloud_index, y=senkou_a, name="先行スパンA（雲）" if ja else "Senkou Span A (Cloud)",
                    line=dict(color="rgba(38,166,154,0.4)", width=1),
                    fill="tonexty", fillcolor="rgba(120,140,160,0.15)"),
         row=1, col=1,
@@ -175,7 +175,7 @@ def build_pattern_candlestick_chart(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure:
+def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list, ja: bool = True) -> go.Figure:
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
@@ -213,12 +213,12 @@ def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure
 
     if "BB" in show_ma:
         fig.add_trace(
-            go.Scatter(x=df.index, y=df["bb_upper"], name="BB上限",
+            go.Scatter(x=df.index, y=df["bb_upper"], name="BB上限" if ja else "BB Upper",
                        line=dict(color="rgba(180,180,180,0.6)", width=1, dash="dash")),
             row=1, col=1,
         )
         fig.add_trace(
-            go.Scatter(x=df.index, y=df["bb_lower"], name="BB下限",
+            go.Scatter(x=df.index, y=df["bb_lower"], name="BB下限" if ja else "BB Lower",
                        line=dict(color="rgba(180,180,180,0.6)", width=1, dash="dash"),
                        fill="tonexty", fillcolor="rgba(150,150,150,0.08)"),
             row=1, col=1,
@@ -232,33 +232,33 @@ def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list) -> go.Figure
         )
 
     if "一目雲" in show_ma:
-        _add_ichimoku_traces(fig, df)
+        _add_ichimoku_traces(fig, df, ja)
 
     vol_colors = [
         "#26a69a" if c >= o else "#ef5350"
         for c, o in zip(df["close"], df["open"])
     ]
     fig.add_trace(
-        go.Bar(x=df.index, y=df["volume"], name="出来高",
+        go.Bar(x=df.index, y=df["volume"], name="出来高" if ja else "Volume",
                marker_color=vol_colors, opacity=0.6),
         row=2, col=1,
     )
 
     fig.update_layout(
-        title=f"{ticker} 価格チャート",
+        title=f"{ticker} 価格チャート" if ja else f"{ticker} Price Chart",
         xaxis_rangeslider_visible=False,
         height=580,
         template="plotly_dark",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         margin=dict(t=60, b=20),
     )
-    fig.update_yaxes(title_text="価格", row=1, col=1)
-    fig.update_yaxes(title_text="出来高", row=2, col=1)
+    fig.update_yaxes(title_text="価格" if ja else "Price", row=1, col=1)
+    fig.update_yaxes(title_text="出来高" if ja else "Volume", row=2, col=1)
 
     return fig
 
 
-def build_rsi_chart(df: pd.DataFrame) -> go.Figure:
+def build_rsi_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -270,13 +270,15 @@ def build_rsi_chart(df: pd.DataFrame) -> go.Figure:
     fig.add_hrect(y0=70, y1=100, fillcolor="red", opacity=0.05, line_width=0)
     fig.add_hrect(y0=0, y1=30, fillcolor="green", opacity=0.05, line_width=0)
     fig.add_hline(y=70, line_dash="dash", line_color="rgba(255,80,80,0.6)",
-                  annotation_text="売られすぎ 70", annotation_position="right")
+                  annotation_text="売られすぎ 70" if ja else "Overbought 70",
+                  annotation_position="right")
     fig.add_hline(y=30, line_dash="dash", line_color="rgba(80,200,80,0.6)",
-                  annotation_text="買われすぎ 30", annotation_position="right")
+                  annotation_text="買われすぎ 30" if ja else "Oversold 30",
+                  annotation_position="right")
     fig.add_hline(y=50, line_dash="dot", line_color="rgba(150,150,150,0.4)")
 
     fig.update_layout(
-        title="RSI（相対力指数）",
+        title="RSI（相対力指数）" if ja else "RSI (Relative Strength Index)",
         height=220,
         template="plotly_dark",
         yaxis=dict(range=[0, 100]),
@@ -286,7 +288,7 @@ def build_rsi_chart(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def build_macd_chart(df: pd.DataFrame) -> go.Figure:
+def build_macd_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
     hist_colors = [
         "#26a69a" if v >= 0 else "#ef5350"
         for v in df["macd_hist"].fillna(0)
@@ -296,7 +298,7 @@ def build_macd_chart(df: pd.DataFrame) -> go.Figure:
 
     fig.add_trace(go.Bar(
         x=df.index, y=df["macd_hist"],
-        name="ヒストグラム",
+        name="ヒストグラム" if ja else "Histogram",
         marker_color=hist_colors,
         opacity=0.7,
     ))
@@ -307,7 +309,7 @@ def build_macd_chart(df: pd.DataFrame) -> go.Figure:
     ))
     fig.add_trace(go.Scatter(
         x=df.index, y=df["macd_signal"],
-        name="シグナル",
+        name="シグナル" if ja else "Signal",
         line=dict(color="#ff7f0e", width=1.5),
     ))
 
@@ -323,7 +325,7 @@ def build_macd_chart(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def build_adx_chart(df: pd.DataFrame) -> go.Figure:
+def build_adx_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -340,10 +342,11 @@ def build_adx_chart(df: pd.DataFrame) -> go.Figure:
     ))
 
     fig.add_hline(y=25, line_dash="dash", line_color="rgba(150,150,150,0.5)",
-                  annotation_text="トレンドあり 25", annotation_position="right")
+                  annotation_text="トレンドあり 25" if ja else "Trending 25",
+                  annotation_position="right")
 
     fig.update_layout(
-        title="ADX（トレンド強度）/ +DI・-DI",
+        title="ADX（トレンド強度）/ +DI・-DI" if ja else "ADX (Trend Strength) / +DI/-DI",
         height=220,
         template="plotly_dark",
         margin=dict(t=40, b=20),
@@ -352,7 +355,7 @@ def build_adx_chart(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def build_obv_chart(df: pd.DataFrame) -> go.Figure:
+def build_obv_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -365,7 +368,7 @@ def build_obv_chart(df: pd.DataFrame) -> go.Figure:
     ))
 
     fig.update_layout(
-        title="OBV（出来高バランス）",
+        title="OBV（出来高バランス）" if ja else "OBV (On-Balance Volume)",
         height=220,
         template="plotly_dark",
         margin=dict(t=40, b=20),
@@ -379,6 +382,7 @@ def build_comparison_chart(
     idx_df: pd.DataFrame,
     ticker: str,
     idx_name: str,
+    ja: bool = True,
 ) -> go.Figure:
     # 共通期間に揃える
     start = max(df.index[0], idx_df.index[0])
@@ -409,11 +413,15 @@ def build_comparison_chart(
     fig.add_hline(y=100, line_dash="dash", line_color="rgba(180,180,180,0.4)")
 
     sign = "+" if alpha >= 0 else ""
+    title = (
+        f"相対パフォーマンス比較（期初=100）　超過リターン: {sign}{alpha:.1f}%" if ja
+        else f"Relative Performance (Start=100)   Alpha: {sign}{alpha:.1f}%"
+    )
     fig.update_layout(
-        title=f"相対パフォーマンス比較（期初=100）　超過リターン: {sign}{alpha:.1f}%",
+        title=title,
         height=320,
         template="plotly_dark",
-        yaxis_title="相対パフォーマンス",
+        yaxis_title="相対パフォーマンス" if ja else "Relative Performance",
         margin=dict(t=50, b=20),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )

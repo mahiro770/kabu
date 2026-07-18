@@ -83,20 +83,20 @@ def get_sector_display(info: dict, lang: str) -> str:
     return sector, industry
 
 
-def get_external_links(ticker: str, info: dict, is_japan: bool) -> list[tuple[str, str]]:
+def get_external_links(ticker: str, info: dict, is_japan: bool, ja: bool = True) -> list[tuple[str, str]]:
     links = []
     if is_japan:
         code = ticker[:-2]
-        links.append(("四季報オンライン", f"https://shikiho.toyokeizai.net/stocks/{code}"))
+        links.append(("四季報オンライン" if ja else "Shikiho Online", f"https://shikiho.toyokeizai.net/stocks/{code}"))
         links.append(("Kabutan", f"https://kabutan.jp/stock/?code={code}"))
-        links.append(("バフェット・コード", f"https://www.buffett-code.com/company/{code}"))
-        links.append(("Yahoo!ファイナンス", f"https://finance.yahoo.co.jp/quote/{ticker}"))
+        links.append(("バフェット・コード" if ja else "Buffett Code", f"https://www.buffett-code.com/company/{code}"))
+        links.append(("Yahoo!ファイナンス" if ja else "Yahoo! Finance Japan", f"https://finance.yahoo.co.jp/quote/{ticker}"))
     else:
         links.append(("Yahoo Finance", f"https://finance.yahoo.com/quote/{ticker}"))
         links.append(("StockAnalysis.com", f"https://stockanalysis.com/stocks/{ticker}"))
     website = info.get("website")
     if website:
-        links.append(("公式サイト" if is_japan else "Official Site", website))
+        links.append(("公式サイト" if ja else "Official Site", website))
     return links
 
 
@@ -113,10 +113,18 @@ def translate_to_ja(text: str) -> str:
         return text
 
 
-def signal_badge(sig: str) -> str:
+SIGNAL_EN = {
+    "買い": "Buy", "やや買い": "Slightly Buy",
+    "売り": "Sell", "やや売り": "Slightly Sell",
+    "中立": "Neutral",
+}
+
+
+def signal_badge(sig: str, ja: bool = True) -> str:
     cls = {"買い": "signal-buy", "やや買い": "signal-buy",
            "売り": "signal-sell", "やや売り": "signal-sell"}.get(sig, "signal-neutral")
-    return f'<span class="{cls}">{sig}</span>'
+    label = sig if ja else SIGNAL_EN.get(sig, sig)
+    return f'<span class="{cls}">{label}</span>'
 
 
 def _fmt_fin(val, fmt: str = ".1f", suffix: str = "") -> str:
@@ -189,19 +197,22 @@ def _resolve_stock(raw: str, period: str = "5d"):
     return ticker, None, {}, False
 
 
-def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, username: str) -> None:
-    new_ticker = st.text_input("銘柄追加（例: 7203 / トヨタ）", key=f"{key_prefix}_add_input",
-                               placeholder="7203 / トヨタ / AAPL")
-    if st.button("追加", key=f"{key_prefix}_add_btn", use_container_width=True):
+def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, username: str, ja: bool = True) -> None:
+    new_ticker = st.text_input(
+        "銘柄追加（例: 7203 / トヨタ）" if ja else "Add ticker (e.g. 7203 / Toyota)",
+        key=f"{key_prefix}_add_input",
+        placeholder="7203 / トヨタ / AAPL" if ja else "7203 / Toyota / AAPL",
+    )
+    if st.button("追加" if ja else "Add", key=f"{key_prefix}_add_btn", use_container_width=True):
         raw = new_ticker.strip()
         if raw:
             try:
-                with st.spinner("検索中..."):
+                with st.spinner("検索中..." if ja else "Searching..."):
                     t, _df, wl_info, _resolved = _resolve_stock(raw)
                 if t is None:
-                    st.warning(f"「{raw}」が見つかりませんでした。")
+                    st.warning(f"「{raw}」が見つかりませんでした。" if ja else f"Could not find \"{raw}\".")
                 elif any(w["ticker"] == t for w in wl):
-                    st.info(f"「{t}」は既に追加されています。")
+                    st.info(f"「{t}」は既に追加されています。" if ja else f"\"{t}\" is already on the list.")
                 else:
                     wl_name = get_display_name(wl_info, "日本語", t.endswith(".T")) if wl_info else t
                     entry = {"ticker": t, "name": wl_name or t}
@@ -211,7 +222,7 @@ def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, u
                     save_fn(wl)
                     st.rerun()
             except Exception:
-                st.warning(f"「{raw}」が見つかりませんでした。")
+                st.warning(f"「{raw}」が見つかりませんでした。" if ja else f"Could not find \"{raw}\".")
 
     st.divider()
 
@@ -223,9 +234,10 @@ def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, u
                     st.session_state.current_ticker = wt["ticker"]
                     st.rerun()
                 if show_added_by:
-                    st.caption(f"追加: {wt.get('added_by', '匿名')}")
+                    added_by = wt.get("added_by") or ("匿名" if ja else "Anonymous")
+                    st.caption(f"追加: {added_by}" if ja else f"Added by: {added_by}")
             with col_b:
-                if st.button("✕", key=f"{key_prefix}_del_{i}", help="削除"):
+                if st.button("✕", key=f"{key_prefix}_del_{i}", help="削除" if ja else "Delete"):
                     wl.pop(i)
                     save_fn(wl)
                     st.rerun()
@@ -248,19 +260,27 @@ def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, u
                 )
             st.divider()
     else:
-        st.caption("銘柄を追加してください")
+        st.caption("銘柄を追加してください" if ja else "Add a ticker to get started")
 
 
-def _render_passphrase_reset(name: str, reset_fn, key_prefix: str) -> None:
-    with st.expander("🔑 合言葉を忘れた場合はこちら"):
-        st.caption("名前を指定できれば誰でも合言葉を再設定できます（保存済みの銘柄は消えません）。")
-        new_pw = st.text_input("新しい合言葉", type="password", key=f"{key_prefix}_reset_pw_input")
-        if st.button("再設定する", key=f"{key_prefix}_reset_btn"):
+def _render_passphrase_reset(name: str, reset_fn, key_prefix: str, ja: bool = True) -> None:
+    with st.expander("🔑 合言葉を忘れた場合はこちら" if ja else "🔑 Forgot your passphrase?"):
+        st.caption(
+            "名前を指定できれば誰でも合言葉を再設定できます（保存済みの銘柄は消えません）。" if ja
+            else "Anyone who knows the name can reset the passphrase (saved tickers are kept)."
+        )
+        new_pw = st.text_input(
+            "新しい合言葉" if ja else "New passphrase", type="password", key=f"{key_prefix}_reset_pw_input",
+        )
+        if st.button("再設定する" if ja else "Reset", key=f"{key_prefix}_reset_btn"):
             if new_pw:
                 reset_fn(name, new_pw)
-                st.success("合言葉を再設定しました。上の欄に新しい合言葉を入力してください。")
+                st.success(
+                    "合言葉を再設定しました。上の欄に新しい合言葉を入力してください。" if ja
+                    else "Passphrase reset. Please enter the new passphrase in the field above."
+                )
             else:
-                st.warning("新しい合言葉を入力してください。")
+                st.warning("新しい合言葉を入力してください。" if ja else "Please enter a new passphrase.")
 
 
 def _logout(owner_key: str, items_key: str, passphrase_key: str, name_input_key: str) -> None:
@@ -275,15 +295,16 @@ def _logout(owner_key: str, items_key: str, passphrase_key: str, name_input_key:
 def _render_gated_list(
     owner_key: str, items_key: str, name: str,
     get_record_fn, verify_fn, claim_fn, load_fn, save_fn, reset_fn,
-    key_prefix: str, show_added_by: bool, username: str, name_input_key: str,
+    key_prefix: str, show_added_by: bool, username: str, name_input_key: str, ja: bool,
     new_name_msg: str, need_passphrase_msg: str, wrong_passphrase_msg: str,
 ) -> None:
     """名前/コミュニティ名 + 合言葉で保護されたリストを描画する（新規登録・照合・表示を共通化）。"""
     record = get_record_fn(name)
     passphrase_key = f"{key_prefix}_passphrase_input"
     passphrase = st.text_input(
-        "合言葉", type="password", key=passphrase_key,
-        help="他人が同じ名前を使えないようにするための合言葉です。初めて使うなら自由に決めてください。",
+        "合言葉" if ja else "Passphrase", type="password", key=passphrase_key,
+        help="他人が同じ名前を使えないようにするための合言葉です。初めて使うなら自由に決めてください。" if ja
+        else "A simple passphrase to stop others from using the same name. Pick anything for a first-time name.",
     )
     if record is None:
         if not passphrase:
@@ -295,11 +316,11 @@ def _render_gated_list(
             st.session_state[owner_key] = name
     elif not passphrase:
         st.warning(need_passphrase_msg)
-        _render_passphrase_reset(name, reset_fn, key_prefix)
+        _render_passphrase_reset(name, reset_fn, key_prefix, ja)
         return
     elif not verify_fn(name, passphrase):
         st.error(wrong_passphrase_msg)
-        _render_passphrase_reset(name, reset_fn, key_prefix)
+        _render_passphrase_reset(name, reset_fn, key_prefix, ja)
         return
     else:
         if st.session_state[owner_key] != name:
@@ -307,14 +328,14 @@ def _render_gated_list(
             st.session_state[owner_key] = name
 
     st.button(
-        "🚪 ログアウト", key=f"{key_prefix}_logout_btn",
+        "🚪 ログアウト" if ja else "🚪 Log out", key=f"{key_prefix}_logout_btn",
         on_click=_logout, args=(owner_key, items_key, passphrase_key, name_input_key),
     )
 
     _render_watchlist(
         st.session_state[items_key],
         lambda wl: save_fn(name, wl),
-        key_prefix, show_added_by, username,
+        key_prefix, show_added_by, username, ja,
     )
 
 
@@ -324,13 +345,19 @@ def _fmt_pct(val) -> str:
     return f"{val * 100:.2f}%"
 
 
-def _fmt_cap(val, currency: str) -> str:
+def _fmt_cap(val, currency: str, ja: bool = True) -> str:
     if val is None or val != val:  # None or NaN
         return "N/A"
     if currency == "JPY":
+        if ja:
+            if val >= 1e12:
+                return f"{val/1e12:.2f}兆円"
+            return f"{val/1e8:.0f}億円"
         if val >= 1e12:
-            return f"{val/1e12:.2f}兆円"
-        return f"{val/1e8:.0f}億円"
+            return f"¥{val/1e12:.2f}T"
+        if val >= 1e9:
+            return f"¥{val/1e9:.1f}B"
+        return f"¥{val/1e6:.0f}M"
     else:
         if val >= 1e12:
             return f"${val/1e12:.2f}T"
@@ -359,7 +386,7 @@ def display_financials(
         v2.metric("PER（予想）" if ja else "P/E (Fwd)", _fmt_fin(info.get("forwardPE"), ".1f", mult))
         v3.metric("PBR" if ja else "P/B", _fmt_fin(info.get("priceToBook"), ".2f", mult))
         v4.metric("EPS", _fmt_fin(info.get("trailingEps"), ".2f"))
-        v5.metric("時価総額" if ja else "Market Cap", _fmt_cap(info.get("marketCap"), currency))
+        v5.metric("時価総額" if ja else "Market Cap", _fmt_cap(info.get("marketCap"), currency, ja))
 
     with st.container(border=True, key="seccard_profitability"):
         st.markdown("#### 収益性" if ja else "#### Profitability")
@@ -432,8 +459,8 @@ def display_financials(
         for _, row in fin_history.iterrows():
             year_label = f"{row['year'].year}年{row['year'].month}月期" if ja else row["year"].strftime("%Y-%m")
             rows.append(
-                f"| {year_label} | {_fmt_cap(row['revenue'], currency)} | "
-                f"{_fmt_cap(row['operating_income'], currency)} | {_fmt_cap(row['net_income'], currency)} | "
+                f"| {year_label} | {_fmt_cap(row['revenue'], currency, ja)} | "
+                f"{_fmt_cap(row['operating_income'], currency, ja)} | {_fmt_cap(row['net_income'], currency, ja)} | "
                 f"{_fmt_pct(row['equity_ratio'])} |"
             )
         st.markdown("\n".join(rows))
@@ -473,7 +500,7 @@ def display_financials(
                     n_analysts = _safe_int(rev_row.get("numberOfAnalysts"))
                 rows.append(
                     f"| {period_label} | {_fmt_fin(eps_avg, '.2f')} | {_fmt_pct(eps_growth)} | "
-                    f"{_fmt_cap(rev_avg, currency)} | {_fmt_pct(rev_growth)} | "
+                    f"{_fmt_cap(rev_avg, currency, ja)} | {_fmt_pct(rev_growth)} | "
                     f"{n_analysts if n_analysts is not None else 'N/A'} |"
                 )
             st.markdown("\n".join(rows))
@@ -524,7 +551,7 @@ def display_financials(
                 shares = h.get("shares")
                 shares_str = f"{int(shares):,}" if shares is not None and shares == shares else "N/A"
                 value = h.get("value")
-                value_str = _fmt_cap(value, currency) if value is not None else "-"
+                value_str = _fmt_cap(value, currency, ja) if value is not None else "-"
                 rows.append(
                     f"| {h.get('name', 'N/A')} | {_fmt_pct(h.get('pct'))} | "
                     f"{shares_str} | {value_str} |"
@@ -552,7 +579,7 @@ def display_financials(
         )
 
     # 関連リンク（四季報・株価情報サイトなど）
-    links = get_external_links(ticker, info, is_japan) if ticker else []
+    links = get_external_links(ticker, info, is_japan, ja) if ticker else []
     if links:
         label = "関連リンク" if ja else "Related Links"
         st.markdown(f"#### {label}")
@@ -581,48 +608,70 @@ if "community_watchlist_owner" not in st.session_state:
 
 # ─── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 📋 ウォッチリスト")
+    lang = st.radio("表示言語 / Language", ["日本語", "English"], horizontal=True)
+    ja = lang == "日本語"
 
-    username = st.text_input("あなたの名前", key="username_input", placeholder="例: 山田")
-    username = username.strip() or "匿名"
+    st.markdown("## 📋 ウォッチリスト" if ja else "## 📋 Watchlist")
 
-    tab_public, tab_community, tab_personal = st.tabs(["🌐 公開", "🏘️ コミュニティ", "👤 個人"])
+    username = st.text_input(
+        "あなたの名前" if ja else "Your name", key="username_input",
+        placeholder="例: 山田" if ja else "e.g. Smith",
+    )
+    anon_label = "匿名" if ja else "Anonymous"
+    username = username.strip() or anon_label
+
+    tab_labels_wl = ["🌐 公開", "🏘️ コミュニティ", "👤 個人"] if ja else ["🌐 Public", "🏘️ Community", "👤 Personal"]
+    tab_public, tab_community, tab_personal = st.tabs(tab_labels_wl)
     with tab_public:
-        st.caption("訪問者全員が見られる公開リストです。")
-        _render_watchlist(st.session_state.watchlist, save_watchlist, "public", True, username)
+        st.caption(
+            "訪問者全員が見られる公開リストです。" if ja
+            else "A public list visible to every visitor."
+        )
+        _render_watchlist(st.session_state.watchlist, save_watchlist, "public", True, username, ja)
     with tab_community:
         community_name = st.text_input(
-            "コミュニティ名", key="community_name_input", placeholder="例: 投資仲間グループ",
+            "コミュニティ名" if ja else "Community name", key="community_name_input",
+            placeholder="例: 投資仲間グループ" if ja else "e.g. Investing Friends",
         )
         community_name = community_name.strip()
         if not community_name:
-            st.info("コミュニティ名を入力すると、合言葉を知っている仲間だけで共有できるリストが作れます。")
+            st.info(
+                "コミュニティ名を入力すると、合言葉を知っている仲間だけで共有できるリストが作れます。" if ja
+                else "Enter a community name to create a list shared only with people who know the passphrase."
+            )
         else:
             _render_gated_list(
                 "community_watchlist_owner", "community_watchlist", community_name,
                 get_community_record, verify_community_passphrase, claim_community_name,
                 load_community_watchlist, save_community_watchlist, reset_community_passphrase,
-                "community", True, username, "community_name_input",
-                "🆕 新しいコミュニティ名です。合言葉を決めて入力するとメンバーで共有できます。",
-                "🔒 合言葉を入力してください。",
-                "合言葉が違います。コミュニティ名か合言葉を確認してください。",
+                "community", True, username, "community_name_input", ja,
+                "🆕 新しいコミュニティ名です。合言葉を決めて入力するとメンバーで共有できます。" if ja
+                else "🆕 This is a new community name. Set a passphrase to share the list with members.",
+                "🔒 合言葉を入力してください。" if ja else "🔒 Please enter the passphrase.",
+                "合言葉が違います。コミュニティ名か合言葉を確認してください。" if ja
+                else "Incorrect passphrase. Please check the community name or passphrase.",
             )
     with tab_personal:
-        if username == "匿名":
-            st.info("⬆️ 上の「あなたの名前」を入力すると、自分専用のリストを追加できるようになります。")
+        if username == anon_label:
+            st.info(
+                "⬆️ 上の「あなたの名前」を入力すると、自分専用のリストを追加できるようになります。" if ja
+                else "⬆️ Enter your name above to start adding your own personal list."
+            )
         else:
             _render_gated_list(
                 "personal_watchlist_owner", "personal_watchlist", username,
                 get_personal_record, verify_personal_passphrase, claim_personal_name,
                 load_personal_watchlist, save_personal_watchlist, reset_personal_passphrase,
-                "personal", False, username, "username_input",
-                "🆕 初めてのお名前です。合言葉を決めて入力すると個人リストが使えます。",
-                "🔒 合言葉を入力してください。",
-                "合言葉が違います。別のお名前をお使いください。",
+                "personal", False, username, "username_input", ja,
+                "🆕 初めてのお名前です。合言葉を決めて入力すると個人リストが使えます。" if ja
+                else "🆕 This is a new name. Set a passphrase to start using your personal list.",
+                "🔒 合言葉を入力してください。" if ja else "🔒 Please enter the passphrase.",
+                "合言葉が違います。別のお名前をお使いください。" if ja
+                else "Incorrect passphrase. Please use a different name.",
             )
 
     st.divider()
-    st.markdown("## ⚙️ 設定")
+    st.markdown("## ⚙️ 設定" if ja else "## ⚙️ Settings")
 
     def _format_model_choice(c):
         if c.provider == "gemini":
@@ -632,58 +681,68 @@ with st.sidebar:
         return f"🦙 {c.name}"
 
     selected_model = st.selectbox(
-        "AIモデル",
+        "AIモデル" if ja else "AI Model",
         list_model_choices(),
         format_func=_format_model_choice,
     )
 
-    lang = st.radio("表示言語", ["日本語", "English"], horizontal=True)
-
     period = st.selectbox(
-        "分析期間",
+        "分析期間" if ja else "Analysis Period",
         ["3mo", "6mo", "1y", "2y", "5y"],
         index=2,
-        format_func=lambda x: {
-            "3mo": "3ヶ月", "6mo": "6ヶ月", "1y": "1年", "2y": "2年", "5y": "5年"
-        }[x],
+        format_func=lambda x: (
+            {"3mo": "3ヶ月", "6mo": "6ヶ月", "1y": "1年", "2y": "2年", "5y": "5年"}[x] if ja
+            else {"3mo": "3mo", "6mo": "6mo", "1y": "1y", "2y": "2y", "5y": "5y"}[x]
+        ),
     )
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 
-st.markdown("# 📈 株式AI分析ツール")
-st.caption("テクニカル分析 × AI で買い場・売り場をアシスト")
+st.markdown("# 📈 株式AI分析ツール" if ja else "# 📈 Stock AI Analyzer")
+st.caption("テクニカル分析 × AI で買い場・売り場をアシスト" if ja
+           else "Technical analysis × AI to assist your buy/sell timing")
 
 col_input, col_btn = st.columns([5, 1])
 with col_input:
     ticker_input = st.text_input(
-        "銘柄コード",
+        "銘柄コード" if ja else "Ticker",
         value=st.session_state.current_ticker,
-        placeholder="日本株: 7203 / トヨタ　米国株: AAPL / Apple",
+        placeholder="日本株: 7203 / トヨタ　米国株: AAPL / Apple" if ja
+        else "JP stocks: 7203 / Toyota   US stocks: AAPL / Apple",
         label_visibility="collapsed",
     )
 with col_btn:
-    analyze_btn = st.button("分析", type="primary", use_container_width=True)
+    analyze_btn = st.button("分析" if ja else "Analyze", type="primary", use_container_width=True)
 
 ticker_raw = ticker_input.strip()
 normalized_preview = _normalize_ticker(ticker_raw)
 
 if normalized_preview and (analyze_btn or (st.session_state.current_ticker == normalized_preview and normalized_preview)):
-    with st.spinner(f"「{ticker_raw}」を検索中..."):
+    with st.spinner(f"「{ticker_raw}」を検索中..." if ja else f"Searching for \"{ticker_raw}\"..."):
         ticker, df, info, resolved_by_name = _resolve_stock(ticker_raw, period)
     st.session_state.current_ticker = ticker
 
     # 日本株か米国株かで比較インデックスを決定
     is_japan = ticker.endswith(".T")
     index_ticker = "^N225" if is_japan else "^GSPC"
-    index_name = "日経平均" if is_japan else "S&P 500"
+    index_name = ("日経平均" if ja else "Nikkei 225") if is_japan else "S&P 500"
 
     if df is None or df.empty:
-        st.error(f"「{ticker_raw}」のデータを取得できませんでした。銘柄コードまたは会社名を確認してください。")
-        st.info("日本株は数字4桁のコード（例: 7203）または会社名（例: トヨタ）で検索できます。")
+        st.error(
+            f"「{ticker_raw}」のデータを取得できませんでした。銘柄コードまたは会社名を確認してください。" if ja
+            else f"Could not fetch data for \"{ticker_raw}\". Please check the ticker or company name."
+        )
+        st.info(
+            "日本株は数字4桁のコード（例: 7203）または会社名（例: トヨタ）で検索できます。" if ja
+            else "For JP stocks, search by a 4-digit code (e.g. 7203) or company name (e.g. Toyota)."
+        )
     else:
         if resolved_by_name:
-            st.caption(f"🔍「{ticker_raw}」→ **{ticker}** の検索結果を表示しています")
-        with st.spinner(f"{index_name}のデータを取得中..."):
+            st.caption(
+                f"🔍「{ticker_raw}」→ **{ticker}** の検索結果を表示しています" if ja
+                else f"🔍 Showing results for \"{ticker_raw}\" → **{ticker}**"
+            )
+        with st.spinner(f"{index_name}のデータを取得中..." if ja else f"Fetching {index_name} data..."):
             idx_df = _cached_stock_data(index_ticker, period)
         df = add_indicators(df)
         signals = get_signals(df)
@@ -702,64 +761,77 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
 
         with st.container(border=True, key="seccard_header_metrics"):
             c_price, c_signal = st.columns([3, 1])
-            c_price.metric("現在値", f"{current:,.0f} {currency}",
+            c_price.metric("現在値" if ja else "Current Price", f"{current:,.0f} {currency}",
                             f"{change:+,.0f} ({change_pct:+.2f}%)")
             if is_japan:
                 pts = _get_pts_price(ticker)
                 if pts is not None:
+                    pts_label = "夜間PTS" if ja else "Night PTS"
                     if pts.get("change") is not None and pts.get("change_pct") is not None:
                         c_price.caption(
-                            f"夜間PTS: {pts['price']:,.0f} {currency}"
+                            f"{pts_label}: {pts['price']:,.0f} {currency}"
                             f"（{pts['change']:+,.0f} / {pts['change_pct']:+.2f}%）"
                         )
                     else:
-                        c_price.caption(f"夜間PTS: {pts['price']:,.0f} {currency}")
+                        c_price.caption(f"{pts_label}: {pts['price']:,.0f} {currency}")
             overall = signals.get("overall", "中立")
-            badge_html = signal_badge(overall)
-            c_signal.markdown("**総合シグナル**")
+            badge_html = signal_badge(overall, ja)
+            c_signal.markdown("**総合シグナル**" if ja else "**Overall Signal**")
             c_signal.markdown(badge_html, unsafe_allow_html=True)
 
             c2, c3, c4, c5 = st.columns(4)
-            c2.metric("52週高値", f"{stats['week52_high']:,.0f}")
-            c3.metric("52週安値", f"{stats['week52_low']:,.0f}")
+            c2.metric("52週高値" if ja else "52W High", f"{stats['week52_high']:,.0f}")
+            c3.metric("52週安値" if ja else "52W Low", f"{stats['week52_low']:,.0f}")
             c4.metric("RSI(14)", f"{df['rsi'].iloc[-1]:.1f}" if not df["rsi"].isna().all() else "N/A")
-            c5.metric("ボラティリティ", f"{stats['volatility']:.1f}%")
+            c5.metric("ボラティリティ" if ja else "Volatility", f"{stats['volatility']:.1f}%")
 
         st.divider()
 
-        tab1, tab2, tab3, tab4 = st.tabs(["📈 価格チャート", "📊 インジケーター", "💹 財務指標", "🤖 AI分析"])
+        tab_labels = (
+            ["📈 価格チャート", "📊 インジケーター", "💹 財務指標", "🤖 AI分析"] if ja
+            else ["📈 Price Chart", "📊 Indicators", "💹 Financials", "🤖 AI Analysis"]
+        )
+        tab1, tab2, tab3, tab4 = st.tabs(tab_labels)
 
         with tab1:
+            overlay_options = ["MA20", "MA50", "MA200", "BB", "一目雲" if ja else "Ichimoku Cloud", "VWAP"]
             show_ma = st.multiselect(
-                "表示するオーバーレイ",
-                ["MA20", "MA50", "MA200", "BB", "一目雲", "VWAP"],
+                "表示するオーバーレイ" if ja else "Overlays",
+                overlay_options,
                 default=["MA20", "MA50"],
             )
-            fig_price = build_price_chart(df, ticker, show_ma)
+            if not ja:
+                # build_price_chart側は日本語ラベル固定のため、選択肢のみ英語表示にして内部的には日本語に戻す
+                show_ma = ["一目雲" if v == "Ichimoku Cloud" else v for v in show_ma]
+            fig_price = build_price_chart(df, ticker, show_ma, ja)
             st.plotly_chart(fig_price, width="stretch", theme=None)
 
-            st.markdown("#### テクニカルシグナル")
+            st.markdown("#### テクニカルシグナル" if ja else "#### Technical Signals")
             sc1, sc2, sc3, sc4 = st.columns(4)
             sc5, sc6, sc7, sc8 = st.columns(4)
-            for col, label, key in [
-                (sc1, "MAクロス", "ma_cross"),
-                (sc2, "RSI", "rsi"),
-                (sc3, "MACD", "macd"),
-                (sc4, "ボリンジャー", "bb"),
-                (sc5, "一目均衡表", "ichimoku"),
-                (sc6, "ADX", "adx"),
-                (sc7, "OBV", "obv"),
-                (sc8, "VWAP", "vwap"),
+            signal_labels = {
+                "ma_cross": "MAクロス" if ja else "MA Cross",
+                "rsi": "RSI",
+                "macd": "MACD",
+                "bb": "ボリンジャー" if ja else "Bollinger",
+                "ichimoku": "一目均衡表" if ja else "Ichimoku",
+                "adx": "ADX",
+                "obv": "OBV",
+                "vwap": "VWAP",
+            }
+            for col, key in [
+                (sc1, "ma_cross"), (sc2, "rsi"), (sc3, "macd"), (sc4, "bb"),
+                (sc5, "ichimoku"), (sc6, "adx"), (sc7, "obv"), (sc8, "vwap"),
             ]:
                 sig = signals.get(key, "中立")
                 with col.container(border=True, key=f"sigcard_{key}"):
-                    st.markdown(f"**{label}**")
-                    st.markdown(signal_badge(sig), unsafe_allow_html=True)
+                    st.markdown(f"**{signal_labels[key]}**")
+                    st.markdown(signal_badge(sig, ja), unsafe_allow_html=True)
 
             # 日経平均／S&P500 比較
-            st.markdown(f"#### {index_name}との比較")
+            st.markdown(f"#### {index_name}との比較" if ja else f"#### Comparison with {index_name}")
             if idx_df is not None and not idx_df.empty:
-                fig_cmp = build_comparison_chart(df, idx_df, ticker, index_name)
+                fig_cmp = build_comparison_chart(df, idx_df, ticker, index_name, ja)
                 st.plotly_chart(fig_cmp, width="stretch", theme=None)
 
                 # 超過リターン表示
@@ -770,9 +842,12 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
                     return (d["close"].iloc[-1] / d["close"].iloc[-idx] - 1) * 100
 
                 rc1, rc2, rc3, rc4 = st.columns(4)
+                period_labels_ja = ["1ヶ月", "3ヶ月", "6ヶ月", "1年"]
+                period_labels_en = ["1mo", "3mo", "6mo", "1y"]
+                period_labels = period_labels_ja if ja else period_labels_en
                 for col, label, days in [
-                    (rc1, "1ヶ月", 21), (rc2, "3ヶ月", 63),
-                    (rc3, "6ヶ月", 126), (rc4, "1年", 252),
+                    (rc1, period_labels[0], 21), (rc2, period_labels[1], 63),
+                    (rc3, period_labels[2], 126), (rc4, period_labels[3], 252),
                 ]:
                     sr = period_return(df, days)
                     ir = period_return(idx_df, days)
@@ -781,35 +856,46 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
                         col.metric(
                             label,
                             f"{sr:+.1f}%",
-                            f"超過 {alpha:+.1f}% vs {index_name}",
+                            f"{'超過' if ja else 'Alpha'} {alpha:+.1f}% vs {index_name}",
                             delta_color="normal",
                         )
             else:
-                st.caption(f"{index_name}のデータを取得できませんでした")
+                st.caption(
+                    f"{index_name}のデータを取得できませんでした" if ja
+                    else f"Could not fetch {index_name} data"
+                )
 
         with tab2:
-            st.plotly_chart(build_rsi_chart(df), width="stretch", theme=None)
-            st.plotly_chart(build_macd_chart(df), width="stretch", theme=None)
-            st.plotly_chart(build_adx_chart(df), width="stretch", theme=None)
-            st.plotly_chart(build_obv_chart(df), width="stretch", theme=None)
+            st.plotly_chart(build_rsi_chart(df, ja), width="stretch", theme=None)
+            st.plotly_chart(build_macd_chart(df, ja), width="stretch", theme=None)
+            st.plotly_chart(build_adx_chart(df, ja), width="stretch", theme=None)
+            st.plotly_chart(build_obv_chart(df, ja), width="stretch", theme=None)
 
-            with st.expander("最新テクニカル値"):
+            with st.expander("最新テクニカル値" if ja else "Latest Technical Values"):
                 last = df.iloc[-1]
+                header = "| 指標 | 値 |" if ja else "| Indicator | Value |"
+                macd_signal_label = "MACDシグナル" if ja else "MACD Signal"
+                bb_upper_label = "BB上限" if ja else "BB Upper"
+                bb_lower_label = "BB下限" if ja else "BB Lower"
+                tenkan_label = "一目 転換線" if ja else "Ichimoku Tenkan"
+                kijun_label = "一目 基準線" if ja else "Ichimoku Kijun"
+                senkou_a_label = "一目 先行スパンA" if ja else "Ichimoku Senkou A"
+                senkou_b_label = "一目 先行スパンB" if ja else "Ichimoku Senkou B"
                 st.markdown(f"""
-| 指標 | 値 |
+{header}
 |------|----|
 | MA20 | {last.get('ma20', float('nan')):.2f} |
 | MA50 | {last.get('ma50', float('nan')):.2f} |
 | MA200 | {last.get('ma200', float('nan')):.2f} |
 | RSI(14) | {last.get('rsi', float('nan')):.2f} |
 | MACD | {last.get('macd', float('nan')):.4f} |
-| MACDシグナル | {last.get('macd_signal', float('nan')):.4f} |
-| BB上限 | {last.get('bb_upper', float('nan')):.2f} |
-| BB下限 | {last.get('bb_lower', float('nan')):.2f} |
-| 一目 転換線 | {last.get('ichimoku_tenkan', float('nan')):.2f} |
-| 一目 基準線 | {last.get('ichimoku_kijun', float('nan')):.2f} |
-| 一目 先行スパンA | {last.get('ichimoku_senkou_a', float('nan')):.2f} |
-| 一目 先行スパンB | {last.get('ichimoku_senkou_b', float('nan')):.2f} |
+| {macd_signal_label} | {last.get('macd_signal', float('nan')):.4f} |
+| {bb_upper_label} | {last.get('bb_upper', float('nan')):.2f} |
+| {bb_lower_label} | {last.get('bb_lower', float('nan')):.2f} |
+| {tenkan_label} | {last.get('ichimoku_tenkan', float('nan')):.2f} |
+| {kijun_label} | {last.get('ichimoku_kijun', float('nan')):.2f} |
+| {senkou_a_label} | {last.get('ichimoku_senkou_a', float('nan')):.2f} |
+| {senkou_b_label} | {last.get('ichimoku_senkou_b', float('nan')):.2f} |
 | ADX | {last.get('adx', float('nan')):.1f} |
 | +DI | {last.get('plus_di', float('nan')):.1f} |
 | -DI | {last.get('minus_di', float('nan')):.1f} |
@@ -819,30 +905,40 @@ if normalized_preview and (analyze_btn or (st.session_state.current_ticker == no
 
         with tab3:
             if info:
-                with st.spinner("過去の業績データ・業績予想を取得中..."):
+                with st.spinner("過去の業績データ・業績予想を取得中..." if ja else "Fetching historical financials and forecasts..."):
                     fin_history, forecast, major_holders, margin_history = _get_financial_tab_data(ticker, is_japan)
                 display_financials(info, currency, lang, fin_history, forecast, ticker, is_japan, major_holders, margin_history)
             else:
-                st.warning("財務データを取得できませんでした")
+                st.warning("財務データを取得できませんでした" if ja else "Could not fetch financial data")
 
         with tab4:
-            st.info("AIがテクニカル指標・価格動向・財務データを総合分析します。**投資は自己責任でお願いします。**")
-            st.caption(f"使用モデル: {selected_model.name}")
+            st.info(
+                "AIがテクニカル指標・価格動向・財務データを総合分析します。**投資は自己責任でお願いします。**" if ja
+                else "The AI will analyze technical indicators, price trends, and financial data together. "
+                     "**Investment decisions are your own responsibility.**"
+            )
+            st.caption(f"使用モデル: {selected_model.name}" if ja else f"Model: {selected_model.name}")
 
-            if st.button("🤖 AI分析を実行", type="primary", key="ai_btn"):
+            if st.button("🤖 AI分析を実行" if ja else "🤖 Run AI Analysis", type="primary", key="ai_btn"):
                 with st.container(border=True, key="seccard_ai_report"):
                     placeholder = st.empty()
                     full_text = ""
-                    with st.spinner("AIが分析中...（1〜2分かかります）"):
+                    with st.spinner("AIが分析中...（1〜2分かかります）" if ja else "AI is analyzing... (takes 1-2 minutes)"):
                         for chunk in analyze_stock_stream(df, info, signals, stats, selected_model):
                             full_text += chunk
                             placeholder.markdown(full_text)
 
 else:
-    st.page_link("pages/2_ウォッチリスト一覧.py", label="📋 ウォッチリスト一覧を見る（現在値・値動き・メモ）", icon="📋")
+    st.page_link(
+        "pages/2_ウォッチリスト一覧.py",
+        label="📋 ウォッチリスト一覧を見る（現在値・値動き・メモ）" if ja
+        else "📋 View watchlist (price, chart, memo)",
+        icon="📋",
+    )
 
     with st.container(border=True, key="seccard_usage_guide"):
-        st.markdown("""
+        if ja:
+            st.markdown("""
 ### 使い方
 
 | ステップ | 内容 |
@@ -862,6 +958,32 @@ else:
 - `8306.T` — 三菱UFJフィナンシャル
 
 **米国株**
+- `AAPL` — Apple
+- `TSLA` — Tesla
+- `NVDA` — NVIDIA
+- `MSFT` — Microsoft
+""")
+        else:
+            st.markdown("""
+### How to use
+
+| Step | Description |
+|--------|------|
+| 1️⃣ | Enter a ticker and click "Analyze" |
+| 2️⃣ | Check the candlestick chart and index comparison |
+| 3️⃣ | Check indicators like RSI and MACD |
+| 4️⃣ | Check financials (PER, ROE, ROA, etc.) |
+| 5️⃣ | Get the AI's view in the AI Analysis tab |
+
+### Example ticker codes
+
+**Japanese stocks (suffix `.T`)**
+- `7203.T` — Toyota Motor
+- `9984.T` — SoftBank Group
+- `6758.T` — Sony Group
+- `8306.T` — Mitsubishi UFJ Financial
+
+**US stocks**
 - `AAPL` — Apple
 - `TSLA` — Tesla
 - `NVDA` — NVIDIA
