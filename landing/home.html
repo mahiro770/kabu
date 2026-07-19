@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>株式AI分析ツール — テクニカル分析×AIで、次の一手を掴む。</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+  :root {
+    --paper: #121212;
+    --paper-soft: #1B1B19;
+    --paper-soft-2: #232320;
+    --ink: #EDEAE0;
+    --ink-soft: #A6A399;
+    --up: #4E9A79;
+    --down: #C05B3F;
+    --gold: #D2AE5C;
+    --hairline: rgba(237,234,224,0.14);
+    --hairline-strong: rgba(237,234,224,0.28);
+    --font-display: 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
+    --font-body: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  a { color: inherit; }
+  img, canvas, svg { display: block; max-width: 100%; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 1.4em;
+    height: 1px;
+    background: var(--gold);
+    display: inline-block;
+  }
+
+  .section {
+    position: relative;
+    padding: clamp(4rem, 8vw, 6.5rem) clamp(1.5rem, 6vw, 5rem);
+    border-top: 1px solid var(--hairline);
+  }
+  .section[data-index]::after {
+    content: attr(data-index);
+    position: absolute;
+    top: clamp(1.6rem, 3vw, 2.2rem);
+    right: clamp(1.5rem, 6vw, 5rem);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- HERO ---------- */
+  #hero {
+    padding-top: clamp(3rem, 8vw, 5rem);
+    border-top: none;
+    overflow: hidden;
+  }
+  #hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+  .hero-top {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: clamp(3.5rem, 10vw, 6rem);
+  }
+  .hero-mark {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+  }
+  .hero-body { position: relative; z-index: 2; max-width: 46rem; }
+  h1.hero-title {
+    font-size: clamp(1.7rem, 7vw, 4rem);
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+  }
+  .hero-title .accent { color: var(--gold); }
+  .hero-tagline {
+    margin-top: 1.4rem;
+    font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+    color: var(--ink-soft);
+    max-width: 34rem;
+  }
+  .hero-desc {
+    margin-top: 1rem;
+    max-width: 34rem;
+    color: var(--ink-soft);
+  }
+  .hero-cta-row {
+    margin-top: 2.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.4rem;
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    background: #3a3221;
+    border: 1px solid rgba(210, 174, 92, 0.4);
+    color: var(--ink);
+    text-decoration: none;
+    border-radius: 10px;
+    padding: 0.85rem 1.7rem;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 1.02rem;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 0 3px rgba(210, 174, 92, 0.18);
+    transform: translateY(-1px);
+  }
+  .hero-meta {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- FEATURES ---------- */
+  .feat-head { max-width: 32rem; margin-bottom: 2.6rem; }
+  .feat-head h2 { font-size: clamp(1.7rem, 3vw, 2.3rem); margin-bottom: 0.9rem; }
+  .feat-head p { color: var(--ink-soft); margin: 0; }
+
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+  }
+  @media (max-width: 980px) {
+    .feat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .feat-grid { grid-template-columns: 1fr; }
+  }
+  .feat-card {
+    background: var(--paper);
+    padding: 1.6rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    transition: background 0.2s ease;
+  }
+  .feat-card:hover { background: var(--paper-soft); }
+  .feat-card .num {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+  }
+  .feat-card h3 {
+    font-size: 1.08rem;
+    font-weight: 600;
+  }
+  .feat-card p {
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    line-height: 1.75;
+  }
+
+  /* ---------- HOW IT WORKS ---------- */
+  .steps-head { max-width: 32rem; margin-bottom: 2.6rem; }
+  .steps-head h2 { font-size: clamp(1.7rem, 3vw, 2.3rem); }
+  .steps {
+    display: flex;
+    flex-direction: column;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 3.5rem 1fr;
+    gap: 1.4rem;
+    padding: 1.4rem 0;
+    border-top: 1px solid var(--hairline);
+    align-items: baseline;
+  }
+  .step:last-child { border-bottom: 1px solid var(--hairline); }
+  .step .step-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.3rem;
+    color: var(--gold);
+  }
+  .step p { margin: 0; font-size: 1rem; }
+
+  /* ---------- FOOTER / CTA ---------- */
+  #cta { text-align: center; }
+  .cta-head h2 {
+    font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+    max-width: 28rem;
+    margin: 0 auto 1rem;
+  }
+  .cta-head p {
+    color: var(--ink-soft);
+    max-width: 31rem;
+    margin: 0 auto;
+  }
+  .cta-tickers {
+    margin: 2.4rem auto 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    max-width: 40rem;
+  }
+  .ticker-chip {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 999px;
+    padding: 0.35em 0.9em;
+  }
+  .ticker-chip b { color: var(--ink); font-weight: 600; }
+  .cta-row { margin-top: 2.6rem; }
+
+  footer {
+    padding: 2.6rem clamp(1.5rem, 6vw, 5rem) 3.5rem;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+  footer .disclaimer { max-width: 40rem; }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<section id="hero" class="section">
+  <canvas id="hero-canvas" aria-hidden="true"></canvas>
+  <div class="hero-top">
+    <span class="hero-mark">📈 株式AI分析ツール</span>
+    <span class="eyebrow">Stock AI Analyzer</span>
+  </div>
+  <div class="hero-body">
+    <h1 class="hero-title">テクニカル分析×AIで、<br><span class="accent">次の一手</span>を掴む。</h1>
+    <p class="hero-tagline">日本株・米国株向けのAI支援分析ツール。</p>
+    <p class="hero-desc">ローソク足チャート、豊富なテクニカル指標、財務指標、AIによる分析レポート、ニュース駆動の銘柄スクリーニングを、ひとつの画面で。デフォルトは日本語UIで、英語表示への切り替えにも対応しています。</p>
+    <div class="hero-cta-row">
+      <a class="btn-primary" href="https://kabusearch.streamlit.app/" target="_blank" rel="noopener">アプリを開く →</a>
+      <span class="hero-meta">無料・登録不要ですぐに使えます</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section id="features" class="section" data-index="FEATURES">
+  <div class="feat-head">
+    <span class="eyebrow">What You Can Do</span>
+    <h2 style="margin-top:1.2rem;">できること</h2>
+    <p>銘柄分析からスクリーニング、ウォッチリスト管理まで、株式投資の情報収集をひとつのツールに集約しました。</p>
+  </div>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <span class="num">01</span>
+      <h3>テクニカルチャート</h3>
+      <p>ローソク足＋MA・ボリンジャーバンド・一目均衡表・VWAPなどのオーバーレイ、RSI・MACD・ADX・OBVを表示。</p>
+    </div>
+    <div class="feat-card">
+      <span class="num">02</span>
+      <h3>総合シグナル判定</h3>
+      <p>8つのテクニカル指標を集約し、買い・売り・中立を自動判定。指標ごとの内訳も一目で確認できます。</p>
+    </div>
+    <div class="feat-card">
+      <span class="num">03</span>
+      <h3>財務指標</h3>
+      <p>PER・PBR・ROEなどの主要指標、業績推移・業績予想を表示。日本株は信用取引の推移も確認できます。</p>
+    </div>
+    <div class="feat-card">
+      <span class="num">04</span>
+      <h3>AIアナリストレポート</h3>
+      <p>ローカルOllamaまたはGemini APIが、指標と財務データを踏まえた分析コメントを自然文で生成します。</p>
+    </div>
+    <div class="feat-card">
+      <span class="num">05</span>
+      <h3>注目銘柄スクリーニング</h3>
+      <p>日経・Yahoo!ニュースの経済見出しをAIが分析し、翌営業日以降に注目すべき銘柄を抽出します。</p>
+    </div>
+    <div class="feat-card">
+      <span class="num">06</span>
+      <h3>条件スクリーニング</h3>
+      <p>時価総額・PER・ROE・配当利回りなどの条件を指定して銘柄を検索。中小型株も含めて幅広くヒットします。</p>
+    </div>
+    <div class="feat-card">
+      <span class="num">07</span>
+      <h3>ウォッチリスト</h3>
+      <p>公開・コミュニティ・個人の3種類。銘柄ごとにメモを残し、フォルダで整理できます。</p>
+    </div>
+    <div class="feat-card">
+      <span class="num">08</span>
+      <h3>チャート学習</h3>
+      <p>代表的なテクニカル指標・ローソク足パターンの見方を解説。今そのパターンが出ている銘柄も確認できます。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section id="how" class="section" data-index="HOW IT WORKS">
+  <div class="steps-head">
+    <span class="eyebrow">Usage</span>
+    <h2 style="margin-top:1.2rem;">使い方</h2>
+  </div>
+  <div class="steps">
+    <div class="step"><span class="step-num">01</span><p>銘柄コードを入力して「分析」をクリック</p></div>
+    <div class="step"><span class="step-num">02</span><p>ローソク足チャート・日経平均比較を確認</p></div>
+    <div class="step"><span class="step-num">03</span><p>RSI・MACDなどのインジケーターを確認</p></div>
+    <div class="step"><span class="step-num">04</span><p>財務指標（PER・ROE・ROAなど）を確認</p></div>
+    <div class="step"><span class="step-num">05</span><p>AI分析タブでAIの見解を取得</p></div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section id="cta" class="section">
+  <div class="cta-head">
+    <span class="eyebrow">Get Started</span>
+    <h2 style="margin-top:1.2rem;">気になる銘柄を、今すぐ。</h2>
+    <p>コードを入力するだけで、<br>チャートも財務指標もAIレポートも、すぐに確認できます。</p>
+  </div>
+  <div class="cta-tickers">
+    <span class="ticker-chip"><b>7203.T</b> — トヨタ自動車</span>
+    <span class="ticker-chip"><b>9984.T</b> — ソフトバンクグループ</span>
+    <span class="ticker-chip"><b>6758.T</b> — ソニーグループ</span>
+    <span class="ticker-chip"><b>8306.T</b> — 三菱UFJフィナンシャル</span>
+    <span class="ticker-chip"><b>AAPL</b> — Apple</span>
+    <span class="ticker-chip"><b>TSLA</b> — Tesla</span>
+    <span class="ticker-chip"><b>NVDA</b> — NVIDIA</span>
+    <span class="ticker-chip"><b>MSFT</b> — Microsoft</span>
+  </div>
+  <div class="cta-row">
+    <a class="btn-primary" href="https://kabusearch.streamlit.app/" target="_blank" rel="noopener">アプリを開く →</a>
+  </div>
+</section>
+
+<footer>
+  <span class="disclaimer">本ツールが提供する分析・シグナル・AIレポートは投資助言ではありません。投資判断は自己責任で行ってください。</span>
+  <span>STOCK AI ANALYZER</span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  var reducedMotionMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  var section = document.getElementById("hero");
+  var canvas = document.getElementById("hero-canvas");
+  var ctx = canvas.getContext("2d");
+  var dpr = Math.max(1, window.devicePixelRatio || 1);
+  var W = 0, H = 0;
+  var barW = 7;
+  var bars = [];
+  var scrollPx = 0;
+  var SPEED = 0.02;
+  var rafId = null;
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function hexToRgb(hex) {
+    hex = hex.replace("#", "");
+    return [parseInt(hex.substring(0, 2), 16), parseInt(hex.substring(2, 4), 16), parseInt(hex.substring(4, 6), 16)];
+  }
+
+  function resize() {
+    var rect = section.getBoundingClientRect();
+    W = rect.width; H = rect.height;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var count = Math.ceil(W / barW) + 4;
+    while (bars.length < count) bars.push(genBar(bars.length ? bars[bars.length - 1].c : H * 0.62));
+    while (bars.length > count) bars.shift();
+  }
+
+  function genBar(prevClose) {
+    var base = H * 0.62 || 300;
+    var vol = H * 0.035 || 14;
+    var o = prevClose === undefined ? base : prevClose;
+    var c = clamp(o + rand(-vol, vol) * 0.9, H * 0.35, H * 0.92);
+    var hi = Math.min(o, c) - rand(0, vol * 0.5);
+    var lo = Math.max(o, c) + rand(0, vol * 0.5);
+    return { o: o, c: c, h: hi, l: lo };
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    var upRgb = hexToRgb(cssVar("--up"));
+    var downRgb = hexToRgb(cssVar("--down"));
+    var paperRgb = hexToRgb(cssVar("--paper"));
+    var paperSolid = "rgb(" + paperRgb.join(",") + ")";
+    var paperClear = "rgba(" + paperRgb.join(",") + ",0)";
+
+    ctx.globalAlpha = 0.22;
+    for (var i = 0; i < bars.length; i++) {
+      var x = i * barW - scrollPx;
+      var b = bars[i];
+      var isUp = b.c <= b.o;
+      var rgb = isUp ? upRgb : downRgb;
+      ctx.strokeStyle = ctx.fillStyle = "rgb(" + rgb.join(",") + ")";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + barW / 2, b.h);
+      ctx.lineTo(x + barW / 2, b.l);
+      ctx.stroke();
+      var top = Math.min(b.o, b.c), bh = Math.max(2, Math.abs(b.c - b.o));
+      ctx.fillRect(x + 1, top, barW - 2.4, bh);
+    }
+    ctx.globalAlpha = 1;
+
+    var vgrad = ctx.createLinearGradient(0, H * 0.55, 0, H);
+    vgrad.addColorStop(0, paperClear);
+    vgrad.addColorStop(1, paperSolid);
+    ctx.fillStyle = vgrad;
+    ctx.fillRect(0, H * 0.55, W, H * 0.45);
+
+    var hgrad = ctx.createLinearGradient(0, 0, W, 0);
+    hgrad.addColorStop(0, paperSolid);
+    hgrad.addColorStop(0.06, paperClear);
+    hgrad.addColorStop(0.94, paperClear);
+    hgrad.addColorStop(1, paperSolid);
+    ctx.fillStyle = hgrad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function frame(ts) {
+    scrollPx += SPEED * 16;
+    if (scrollPx >= barW) {
+      scrollPx -= barW;
+      bars.shift();
+      bars.push(genBar(bars[bars.length - 1].c));
+    }
+    draw();
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function start() {
+    if (rafId !== null || reducedMotionMQ.matches) return;
+    rafId = requestAnimationFrame(frame);
+  }
+  function stop() {
+    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  window.addEventListener("resize", function () {
+    clearTimeout(window.__heroResizeT);
+    window.__heroResizeT = setTimeout(function () { resize(); draw(); }, 150);
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) stop(); else start();
+  });
+  reducedMotionMQ.addEventListener("change", function () {
+    if (reducedMotionMQ.matches) { stop(); draw(); } else { start(); }
+  });
+
+  resize();
+  draw();
+  start();
+})();
+</script>
+</body>
+</html>

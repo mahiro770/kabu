@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PULSE OF THE MARKET — 生成的市場観察</title>
+<style>
+  :root {
+    --paper: #EFEDE5;
+    --paper-soft: #E6E3D8;
+    --paper-soft-2: #DEDACB;
+    --ink: #16171A;
+    --ink-soft: #5B5C57;
+    --up: #1E5C46;
+    --down: #8A3324;
+    --gold: #A9822E;
+    --hairline: rgba(22,23,26,0.14);
+    --hairline-strong: rgba(22,23,26,0.28);
+
+    --font-display: "Iowan Old Style", "Palatino Linotype", "Hiragino Mincho ProN", "Noto Serif JP", Georgia, serif;
+    --font-body: "Hiragino Sans", "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #121212;
+      --paper-soft: #1B1B19;
+      --paper-soft-2: #232320;
+      --ink: #EDEAE0;
+      --ink-soft: #A6A399;
+      --up: #4E9A79;
+      --down: #C05B3F;
+      --gold: #D2AE5C;
+      --hairline: rgba(237,234,224,0.14);
+      --hairline-strong: rgba(237,234,224,0.28);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #121212;
+    --paper-soft: #1B1B19;
+    --paper-soft-2: #232320;
+    --ink: #EDEAE0;
+    --ink-soft: #A6A399;
+    --up: #4E9A79;
+    --down: #C05B3F;
+    --gold: #D2AE5C;
+    --hairline: rgba(237,234,224,0.14);
+    --hairline-strong: rgba(237,234,224,0.28);
+  }
+  :root[data-theme="light"] {
+    --paper: #EFEDE5;
+    --paper-soft: #E6E3D8;
+    --paper-soft-2: #DEDACB;
+    --ink: #16171A;
+    --ink-soft: #5B5C57;
+    --up: #1E5C46;
+    --down: #8A3324;
+    --gold: #A9822E;
+    --hairline: rgba(22,23,26,0.14);
+    --hairline-strong: rgba(22,23,26,0.28);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 18px;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    transition: background .4s ease, color .4s ease;
+  }
+
+  img, canvas, svg { display: block; max-width: 100%; }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  a { color: inherit; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 1.4em;
+    height: 1px;
+    background: var(--gold);
+    display: inline-block;
+  }
+
+  .section {
+    position: relative;
+    padding: clamp(4.5rem, 9vw, 8rem) clamp(1.5rem, 6vw, 5rem);
+    border-top: 1px solid var(--hairline);
+  }
+  .section[data-index]::after {
+    content: attr(data-index);
+    position: absolute;
+    top: clamp(1.6rem, 3vw, 2.4rem);
+    right: clamp(1.5rem, 6vw, 5rem);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    color: var(--ink-soft);
+  }
+  /* hero already shows its own eyebrow label up top; the generic index
+     tag would collide with it, especially once both wrap on narrow screens */
+  #hero::after { content: none; }
+
+  .prose {
+    max-width: 34rem;
+  }
+  .prose p { margin: 0 0 1.2em; }
+  .prose p:last-child { margin-bottom: 0; }
+
+  .disclaimer-tag {
+    position: fixed;
+    left: 1.2rem;
+    bottom: 1.2rem;
+    z-index: 40;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+    background: color-mix(in srgb, var(--paper) 82%, transparent);
+    border: 1px solid var(--hairline);
+    padding: 0.5em 0.8em;
+    border-radius: 2px;
+    backdrop-filter: blur(3px);
+  }
+  @media (max-width: 640px) {
+    .disclaimer-tag { display: none; }
+  }
+
+  /* ---------- HERO ---------- */
+  #hero {
+    padding-top: 0;
+    border-top: none;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  #hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .hero-inner {
+    position: relative;
+    z-index: 2;
+    padding: clamp(1.5rem, 6vw, 5rem);
+    padding-bottom: clamp(3rem, 8vw, 6rem);
+  }
+  .hero-top {
+    position: absolute;
+    top: clamp(1.5rem, 5vw, 3rem);
+    left: clamp(1.5rem, 6vw, 5rem);
+    right: clamp(1.5rem, 6vw, 5rem);
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .hero-mark {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+  }
+  h1.hero-title {
+    font-size: clamp(3rem, 10vw, 7.4rem);
+    line-height: 0.98;
+    letter-spacing: -0.01em;
+  }
+  .hero-sub {
+    margin-top: 1.4rem;
+    max-width: 30rem;
+    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    color: var(--ink-soft);
+  }
+  .hero-badge {
+    margin-top: 2.2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+    border: 1px solid var(--hairline-strong);
+    padding: 0.5em 0.9em;
+    border-radius: 999px;
+  }
+  .hero-badge .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 25%, transparent);
+  }
+  .scroll-cue {
+    position: absolute;
+    bottom: clamp(1.4rem, 4vw, 2.2rem);
+    right: clamp(1.5rem, 6vw, 5rem);
+    z-index: 2;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    writing-mode: vertical-rl;
+  }
+  .scroll-cue .line {
+    width: 1px; height: 3.4rem;
+    background: linear-gradient(var(--ink-soft), transparent);
+  }
+
+  /* ---------- INTRO ---------- */
+  #intro h2 {
+    font-size: clamp(1.9rem, 3.6vw, 2.7rem);
+    max-width: 22rem;
+    margin-bottom: 1.6rem;
+  }
+  .pull-quote {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    color: var(--gold);
+    margin: 2.2rem 0;
+    max-width: 26rem;
+    text-wrap: balance;
+  }
+
+  /* ---------- MARKET PULSE ---------- */
+  .pulse-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1.5rem;
+    margin-bottom: 2.6rem;
+  }
+  .pulse-head h2 { font-size: clamp(1.8rem, 3.4vw, 2.5rem); max-width: 26rem; }
+  .pulse-note {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    max-width: 20rem;
+    border-left: 2px solid var(--hairline-strong);
+    padding-left: 0.9em;
+  }
+  .pulse-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+  }
+  @media (max-width: 860px) {
+    .pulse-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .pulse-tile {
+    background: var(--paper);
+    padding: 1.8rem 1.6rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-height: 12.5rem;
+  }
+  .pulse-tile .label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .pulse-tile .value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(1.7rem, 2.6vw, 2.15rem);
+    letter-spacing: -0.01em;
+  }
+  .pulse-tile .delta {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .pulse-tile .delta.up { color: var(--up); }
+  .pulse-tile .delta.down { color: var(--down); }
+  .pulse-tile canvas { width: 100%; height: 34px; margin-top: auto; }
+
+  /* ---------- SECTOR GRID ---------- */
+  .sector-head { max-width: 30rem; margin-bottom: 2.6rem; }
+  .sector-head h2 { font-size: clamp(1.8rem, 3.4vw, 2.5rem); margin-bottom: 0.9rem; }
+  .sector-head p { color: var(--ink-soft); margin: 0; }
+
+  .sector-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+  }
+  @media (max-width: 980px) {
+    .sector-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .sector-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .sector-card {
+    background: var(--paper);
+    padding: 1.3rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    transition: box-shadow .6s ease, background .6s ease;
+  }
+  .sector-card .code {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+  }
+  .sector-card .name {
+    font-size: 0.98rem;
+    line-height: 1.35;
+  }
+  .sector-card .chg {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.15rem;
+    margin-top: auto;
+  }
+  .sector-card.up .chg { color: var(--up); }
+  .sector-card.down .chg { color: var(--down); }
+  .sector-card svg { width: 100%; height: 22px; }
+  .sector-card svg polyline { fill: none; stroke-width: 1.6; }
+  .sector-card.up svg polyline { stroke: var(--up); }
+  .sector-card.down svg polyline { stroke: var(--down); }
+
+  /* ---------- DEPTH ---------- */
+  .depth-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: clamp(2rem, 6vw, 5rem);
+    align-items: center;
+  }
+  @media (max-width: 900px) {
+    .depth-wrap { grid-template-columns: 1fr; }
+  }
+  .depth-head h2 { font-size: clamp(1.8rem, 3.4vw, 2.5rem); margin-bottom: 1.2rem; max-width: 22rem; }
+  .depth-head p { color: var(--ink-soft); margin: 0 0 1em; }
+  .depth-legend {
+    display: flex;
+    gap: 1.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    margin-top: 1.4rem;
+  }
+  .depth-legend span { display: inline-flex; align-items: center; gap: 0.5em; }
+  .depth-legend i { width: 10px; height: 10px; display: inline-block; }
+  .depth-legend .bid i { background: var(--up); }
+  .depth-legend .ask i { background: var(--down); }
+
+  .depth-viz {
+    position: relative;
+    height: clamp(20rem, 34vw, 26rem);
+    overflow: hidden;
+  }
+  .depth-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+  }
+  .depth-mid {
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--hairline-strong);
+  }
+  .depth-row {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+  }
+  .depth-bar-set { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+  .depth-bar-line { display: flex; align-items: center; justify-content: center; height: 6px; }
+  .depth-bar {
+    height: 100%;
+    transition: width .9s cubic-bezier(.2,.7,.3,1), opacity .9s ease;
+  }
+  .depth-bar.bid { background: var(--up); margin-right: 1px; align-self: flex-end; border-radius: 2px 0 0 2px; }
+  .depth-bar.ask { background: var(--down); margin-left: 1px; border-radius: 0 2px 2px 0; }
+  .depth-bar-line { position: relative; }
+  .depth-bar-pair { display: grid; grid-template-columns: 1fr 1fr; align-items: center; height: 6px; }
+  .depth-bar-pair .bid { justify-self: end; }
+  .depth-bar-pair .ask { justify-self: start; }
+
+  /* ---------- MISSION / CTA ---------- */
+  #mission { text-align: center; }
+  .mission-head h2 {
+    font-size: clamp(2rem, 4.4vw, 3.2rem);
+    max-width: 30rem;
+    margin: 0 auto 1rem;
+  }
+  .mission-head p {
+    color: var(--ink-soft);
+    max-width: 28rem;
+    margin: 0 auto;
+  }
+
+  .dial-wrap {
+    margin: 3.2rem auto 1.4rem;
+    width: min(280px, 70vw);
+    aspect-ratio: 1;
+    position: relative;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+  }
+  .dial-wrap svg { width: 100%; height: 100%; }
+  .dial-track { fill: none; stroke: var(--hairline-strong); stroke-width: 2; }
+  .dial-fill { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linecap: round; transition: stroke .4s ease; }
+  .dial-knob { fill: var(--paper); stroke: var(--gold); stroke-width: 2; transition: stroke .4s ease; }
+  .dial-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .dial-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 2.4rem;
+  }
+  .dial-label {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    color: var(--ink-soft);
+    margin-top: 0.3em;
+  }
+  .heat-state {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    min-height: 1.4em;
+  }
+
+  .cta-row {
+    margin-top: 3rem;
+    display: flex;
+    justify-content: center;
+  }
+  .cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 0.3em;
+    transition: color .3s ease, border-color .3s ease, gap .3s ease;
+  }
+  .cta-link:hover { color: var(--gold); border-color: var(--gold); gap: 0.9em; }
+
+  footer {
+    padding: 3rem clamp(1.5rem, 6vw, 5rem) 5rem;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+
+<div class="disclaimer-tag">全数値は演出用の生成データです — SYNTHETIC DATA ONLY</div>
+
+<!-- ============ 01 HERO ============ -->
+<section id="hero" class="section" data-index="01 — HERO">
+  <canvas id="hero-canvas" aria-hidden="true"></canvas>
+  <div class="hero-top">
+    <span class="hero-mark">PULSE OF THE MARKET</span>
+    <span class="eyebrow">Generative Market Study</span>
+  </div>
+  <div class="hero-inner">
+    <h1 class="hero-title">PULSE OF<br>THE MARKET</h1>
+    <p class="hero-sub">値動き、出来高、板の厚み。数字の奥で、市場は今日も呼吸している。これは実在の相場ではなく、その"生理"を翻訳した生成的観察です。</p>
+    <div class="hero-badge"><span class="dot"></span>すべての数値は生成データ — SIMULATED, NOT REAL MARKET DATA</div>
+  </div>
+  <div class="scroll-cue"><span>SCROLL</span><span class="line"></span></div>
+</section>
+
+<!-- ============ 02 INTRO ============ -->
+<section id="intro" class="section" data-index="02 — STATEMENT">
+  <span class="eyebrow">Statement</span>
+  <div class="prose" style="margin-top:1.6rem;">
+    <h2>市場は、単なる数字の集合ではない。</h2>
+    <p>始値と終値のあいだには、無数の意思決定が折り重なっている。誰かが買い、誰かが売り、誰かが迷う。その総和が、チャートという名の心電図になる。</p>
+    <div class="pull-quote">「相場は、生きている。」</div>
+    <p>上下する線は、予測のための道具である以前に、人間の集合的な感情の記録だ。このページは、その"鼓動"を生成的なビジュアルとして翻訳する試みである。</p>
+  </div>
+</section>
+
+<!-- ============ 03 MARKET PULSE ============ -->
+<section id="pulse" class="section" data-index="03 — MARKET PULSE">
+  <span class="eyebrow">Market Pulse — Live Simulation</span>
+  <div class="pulse-head" style="margin-top:1.6rem;">
+    <h2>今、この瞬間の<br>"生成された"鼓動。</h2>
+    <p class="pulse-note">以下のすべての数値は、このページを開くたびに生成される演出用データです。実在の指数・銘柄とは一切関係ありません。</p>
+  </div>
+  <div class="pulse-grid">
+    <div class="pulse-tile" data-pulse="index">
+      <span class="label">生成指数 / GEN-INDEX</span>
+      <span class="value">—</span>
+      <span class="delta">—</span>
+      <canvas></canvas>
+    </div>
+    <div class="pulse-tile" data-pulse="volume">
+      <span class="label">生成出来高 / GEN-VOLUME</span>
+      <span class="value">—</span>
+      <span class="delta">—</span>
+      <canvas></canvas>
+    </div>
+    <div class="pulse-tile" data-pulse="range">
+      <span class="label">値幅 / GEN-RANGE</span>
+      <span class="value">—</span>
+      <span class="delta">—</span>
+      <canvas></canvas>
+    </div>
+    <div class="pulse-tile" data-pulse="temp">
+      <span class="label">市場体温 / MARKET TEMP</span>
+      <span class="value">—</span>
+      <span class="delta">—</span>
+      <canvas></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 SECTOR GRID ============ -->
+<section id="sectors" class="section" data-index="04 — SECTORS">
+  <span class="eyebrow">Sectors, in Motion</span>
+  <div class="sector-head" style="margin-top:1.6rem;">
+    <h2>セクターごとの体温差。</h2>
+    <p>同じ一日でも、業種によって"体温"はまるで違う。以下は架空のセクター記号による生成データの例示です。</p>
+  </div>
+  <div class="sector-grid" id="sector-grid"></div>
+</section>
+
+<!-- ============ 05 DEPTH ============ -->
+<section id="depth" class="section" data-index="05 — DEPTH">
+  <div class="depth-wrap">
+    <div class="depth-head">
+      <span class="eyebrow">The Depth Beneath</span>
+      <h2 style="margin-top:1.6rem;">板の下に眠る、無数の指値。</h2>
+      <p>価格の裏側には、まだ約定していない無数の"意思"が積み上がっている。買いたい人、売りたい人の指値が、静かに層を成す。これは実際の気配値ではなく、板の厚みという現象を可視化した生成イメージです。</p>
+      <div class="depth-legend">
+        <span class="bid"><i></i>買い気配（生成）</span>
+        <span class="ask"><i></i>売り気配（生成）</span>
+      </div>
+    </div>
+    <div class="depth-viz" id="depth-viz">
+      <div class="depth-mid"></div>
+      <div class="depth-layer" id="depth-layer"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 MISSION / CTA ============ -->
+<section id="mission" class="section" data-index="06 — TOUCH">
+  <span class="eyebrow">Touch the Market's Heat</span>
+  <div class="mission-head" style="margin-top:1.6rem;">
+    <h2>市場の熱を、<br>指先で感じる。</h2>
+    <p>円をドラッグ、またはクリックすると、生成される市場の"体温"が変わります。これは実際の相場を動かすものではなく、体感のための演出です。</p>
+  </div>
+
+  <div class="dial-wrap" id="dial">
+    <svg viewBox="0 0 200 200">
+      <circle class="dial-track" cx="100" cy="100" r="88"></circle>
+      <circle class="dial-fill" id="dial-fill" cx="100" cy="100" r="88" stroke-dasharray="553" stroke-dashoffset="553" transform="rotate(-90 100 100)"></circle>
+      <circle class="dial-knob" id="dial-knob" cx="100" cy="12" r="7"></circle>
+    </svg>
+    <div class="dial-center">
+      <span class="dial-value" id="dial-value">50°</span>
+      <span class="dial-label">MARKET HEAT</span>
+    </div>
+  </div>
+  <div class="heat-state" id="heat-state">平常</div>
+
+  <div class="cta-row">
+    <a class="cta-link" href="https://kabusearch.streamlit.app/" target="_blank" rel="noopener">実際の相場を分析してみる — Stock AI Analyzer →</a>
+  </div>
+</section>
+
+<footer>
+  <span>PULSE OF THE MARKET — A generative editorial study. All figures are synthetic and do not represent real securities.</span>
+  <span>CANVAS / SVG / CSS ONLY — NO EXTERNAL LIBRARIES</span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- utilities ---------------- */
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  var reducedMotionMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
+  function prefersReducedMotion() { return reducedMotionMQ.matches; }
+
+  /* ---------------- master loop ---------------- */
+  var animators = [];
+  var rafId = null;
+  var lastTs = 0;
+
+  function frame(ts) {
+    var dt = lastTs ? Math.min(ts - lastTs, 64) : 16;
+    lastTs = ts;
+    for (var i = 0; i < animators.length; i++) {
+      var a = animators[i];
+      if (a.visible !== false) a.update(dt, ts);
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function startLoop() {
+    if (rafId !== null) return;
+    lastTs = 0;
+    rafId = requestAnimationFrame(frame);
+  }
+  function stopLoop() {
+    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+  function staticPass() {
+    for (var i = 0; i < animators.length; i++) animators[i].update(0, performance.now());
+  }
+  function applyMotionState() {
+    if (prefersReducedMotion() || document.hidden) {
+      stopLoop();
+      if (!document.hidden) staticPass();
+    } else {
+      startLoop();
+    }
+  }
+  reducedMotionMQ.addEventListener("change", applyMotionState);
+  document.addEventListener("visibilitychange", applyMotionState);
+
+  /* ---------------- shared: visibility-gated sections ---------------- */
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      var a = entry.target.__animator;
+      if (a) a.visible = entry.isIntersecting;
+    });
+  }, { threshold: 0.05 });
+
+  function watchSection(el, animator) {
+    el.__animator = animator;
+    io.observe(el);
+  }
+
+  /* ---------------- color helpers ---------------- */
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function hexToRgbTriplet(hex) {
+    hex = hex.replace("#", "");
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    var r = parseInt(hex.substring(0, 2), 16);
+    var g = parseInt(hex.substring(2, 4), 16);
+    var b = parseInt(hex.substring(4, 6), 16);
+    return [r, g, b];
+  }
+
+  /* ================= HERO WAVE ================= */
+  (function heroWave() {
+    var section = document.getElementById("hero");
+    var canvas = document.getElementById("hero-canvas");
+    var ctx = canvas.getContext("2d");
+    var dpr = Math.max(1, window.devicePixelRatio || 1);
+    var W = 0, H = 0;
+    var barW = 6;
+    var bars = [];
+    var scrollPx = 0;
+    var SPEED = 0.024; // px per ms
+
+    function resize() {
+      var rect = section.getBoundingClientRect();
+      W = rect.width; H = rect.height;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      canvas.style.width = W + "px";
+      canvas.style.height = H + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var count = Math.ceil(W / barW) + 4;
+      while (bars.length < count) bars.push(genBar(bars.length ? bars[bars.length - 1].c : H * 0.55));
+      while (bars.length > count) bars.shift();
+    }
+
+    function genBar(prevClose) {
+      var base = H * 0.55 || 260;
+      var vol = H * 0.045 || 20;
+      var o = prevClose === undefined ? base : prevClose;
+      var drift = rand(-vol, vol) * 0.9;
+      var c = clamp(o + drift, H * 0.12, H * 0.88);
+      var h = Math.min(o, c) - rand(0, vol * 0.6);
+      var l = Math.max(o, c) + rand(0, vol * 0.6);
+      return { o: o, c: c, h: h, l: l };
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      var up = cssVar("--up"), down = cssVar("--down"), gold = cssVar("--gold");
+
+      // candle field (faint)
+      ctx.globalAlpha = 0.32;
+      for (var i = 0; i < bars.length; i++) {
+        var x = i * barW - scrollPx;
+        var b = bars[i];
+        var isUp = b.c <= b.o;
+        ctx.strokeStyle = isUp ? up : down;
+        ctx.fillStyle = isUp ? up : down;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + barW / 2, b.h);
+        ctx.lineTo(x + barW / 2, b.l);
+        ctx.stroke();
+        var top = Math.min(b.o, b.c), bh = Math.max(2, Math.abs(b.c - b.o));
+        ctx.fillRect(x + 1, top, barW - 2.4, bh);
+      }
+      ctx.globalAlpha = 1;
+
+      // bold index line
+      ctx.beginPath();
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = gold;
+      ctx.shadowColor = gold;
+      ctx.shadowBlur = 8;
+      for (var j = 0; j < bars.length; j++) {
+        var xx = j * barW - scrollPx + barW / 2;
+        var yy = bars[j].c;
+        if (j === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // fade edges (hue-matched alpha fade — interpolating toward rgba(0,0,0,0)
+      // would drag the color through black mid-fade, producing a grey halo)
+      var paper = cssVar("--paper");
+      var paperRgb = hexToRgbTriplet(paper);
+      var paperSolid = "rgb(" + paperRgb.join(",") + ")";
+      var paperClear = "rgba(" + paperRgb.join(",") + ",0)";
+
+      var grad = ctx.createLinearGradient(0, 0, W, 0);
+      grad.addColorStop(0, paperSolid);
+      grad.addColorStop(0.05, paperClear);
+      grad.addColorStop(0.95, paperClear);
+      grad.addColorStop(1, paperSolid);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      var vgrad = ctx.createLinearGradient(0, H * 0.7, 0, H);
+      vgrad.addColorStop(0, paperClear);
+      vgrad.addColorStop(1, paperSolid);
+      ctx.fillStyle = vgrad;
+      ctx.fillRect(0, H * 0.7, W, H * 0.3);
+    }
+
+    var animator = {
+      visible: true,
+      update: function (dt) {
+        if (dt > 0) {
+          scrollPx += dt * SPEED;
+          if (scrollPx >= barW) {
+            scrollPx -= barW;
+            bars.shift();
+            bars.push(genBar(bars[bars.length - 1].c));
+          }
+        }
+        draw();
+      }
+    };
+
+    window.addEventListener("resize", debounce(resize, 150));
+    resize();
+    draw();
+    watchSection(section, animator);
+    animators.push(animator);
+  })();
+
+  function debounce(fn, ms) {
+    var t;
+    return function () {
+      clearTimeout(t);
+      var args = arguments;
+      t = setTimeout(function () { fn.apply(null, args); }, ms);
+    };
+  }
+
+  /* ================= MARKET PULSE TILES ================= */
+  (function marketPulse() {
+    var section = document.getElementById("pulse");
+    var configs = {
+      index: { base: 24680, vol: 90, fmt: function (v) { return v.toFixed(0); }, suffix: "" },
+      volume: { base: 3200, vol: 140, fmt: function (v) { return v.toFixed(0) + "M"; }, suffix: "" },
+      range: { base: 180, vol: 22, fmt: function (v) { return v.toFixed(1); }, suffix: "" },
+      temp: { base: 52, vol: 6, min: 0, max: 100, fmt: function (v) { return v.toFixed(0) + "°"; }, suffix: "" }
+    };
+
+    var tiles = [];
+    Object.keys(configs).forEach(function (key) {
+      var el = section.querySelector('.pulse-tile[data-pulse="' + key + '"]');
+      var cfg = configs[key];
+      var canvas = el.querySelector("canvas");
+      var ctx = canvas.getContext("2d");
+      var dpr = Math.max(1, window.devicePixelRatio || 1);
+      var history = [];
+      var HIST_LEN = 36;
+      var value = cfg.base;
+      var display = cfg.base;
+      var lastDelta = 0;
+      var acc = 0;
+      var INTERVAL = 700 + Math.random() * 400;
+
+      for (var i = 0; i < HIST_LEN; i++) history.push(cfg.base);
+
+      function resizeCanvas() {
+        var r = canvas.getBoundingClientRect();
+        canvas.width = Math.round(r.width * dpr);
+        canvas.height = Math.round(r.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resizeCanvas();
+      window.addEventListener("resize", debounce(resizeCanvas, 150));
+
+      function step() {
+        var prev = value;
+        var delta = rand(-cfg.vol, cfg.vol);
+        value = value + delta;
+        if (cfg.min !== undefined) value = clamp(value, cfg.min, cfg.max);
+        history.push(value);
+        if (history.length > HIST_LEN) history.shift();
+        lastDelta = value - prev;
+      }
+
+      function drawSpark() {
+        var r = canvas.getBoundingClientRect();
+        var w = r.width, h = r.height;
+        ctx.clearRect(0, 0, w, h);
+        var min = Math.min.apply(null, history), max = Math.max.apply(null, history);
+        var range = (max - min) || 1;
+        var isUp = lastDelta >= 0;
+        ctx.beginPath();
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = isUp ? cssVar("--up") : cssVar("--down");
+        for (var i = 0; i < history.length; i++) {
+          var x = (i / (history.length - 1)) * w;
+          var y = h - ((history[i] - min) / range) * (h - 4) - 2;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      function render() {
+        el.querySelector(".value").textContent = cfg.fmt(display);
+        var d = el.querySelector(".delta");
+        var pct = lastDelta;
+        var sign = pct >= 0 ? "+" : "";
+        d.textContent = sign + pct.toFixed(1) + (key === "temp" ? "°" : "");
+        d.className = "delta " + (pct >= 0 ? "up" : "down");
+        drawSpark();
+      }
+
+      var tile = {
+        visible: true,
+        update: function (dt) {
+          if (dt === 0) { step(); display = value; render(); return; }
+          acc += dt;
+          if (acc >= INTERVAL) {
+            acc = 0;
+            step();
+          }
+          display = lerp(display, value, 0.06);
+          render();
+        }
+      };
+      tiles.push(tile);
+    });
+
+    var groupAnimator = {
+      visible: true,
+      update: function (dt, ts) {
+        tiles.forEach(function (t) { t.update(dt, ts); });
+      }
+    };
+    watchSection(section, groupAnimator);
+    animators.push(groupAnimator);
+  })();
+
+  /* ================= SECTOR GRID ================= */
+  (function sectorGrid() {
+    var section = document.getElementById("sectors");
+    var grid = document.getElementById("sector-grid");
+    var sectors = [
+      "テクノロジー", "ヘルスケア", "エネルギー", "素材",
+      "金融", "一般消費財", "生活必需品", "資本財",
+      "公益事業", "不動産", "通信", "半導体",
+      "自動車", "小売"
+    ];
+
+    var cards = sectors.map(function (name, i) {
+      var code = "SEC-" + String(i + 1).padStart(2, "0");
+      var history = [];
+      var HIST_LEN = 14;
+      var value = rand(-2.5, 2.5);
+      for (var k = 0; k < HIST_LEN; k++) history.push(rand(-2.5, 2.5));
+      history.push(value);
+
+      var el = document.createElement("div");
+      el.className = "sector-card";
+      el.innerHTML =
+        '<span class="code">' + code + '</span>' +
+        '<span class="name">' + name + '</span>' +
+        '<svg viewBox="0 0 60 22" preserveAspectRatio="none"><polyline points=""></polyline></svg>' +
+        '<span class="chg">—</span>';
+      grid.appendChild(el);
+
+      function render() {
+        var isUp = value >= 0;
+        el.className = "sector-card " + (isUp ? "up" : "down");
+        var sign = isUp ? "+" : "";
+        el.querySelector(".chg").textContent = sign + value.toFixed(2) + "%";
+
+        var min = Math.min.apply(null, history), max = Math.max.apply(null, history);
+        var range = (max - min) || 1;
+        var pts = history.map(function (v, i2) {
+          var x = (i2 / (history.length - 1)) * 60;
+          var y = 20 - ((v - min) / range) * 18 - 1;
+          return x.toFixed(1) + "," + y.toFixed(1);
+        }).join(" ");
+        el.querySelector("polyline").setAttribute("points", pts);
+      }
+      render();
+
+      return {
+        step: function () {
+          value = clamp(value + rand(-1.1, 1.1), -9, 9);
+          history.push(value);
+          if (history.length > HIST_LEN) history.shift();
+          render();
+        }
+      };
+    });
+
+    var acc = 0;
+    var INTERVAL = 2600;
+    var animator = {
+      visible: true,
+      update: function (dt) {
+        if (dt === 0) return;
+        acc += dt;
+        if (acc >= INTERVAL) {
+          acc = 0;
+          var n = 3 + Math.floor(Math.random() * 4);
+          for (var i = 0; i < n; i++) {
+            cards[Math.floor(Math.random() * cards.length)].step();
+          }
+        }
+      }
+    };
+    watchSection(section, animator);
+    animators.push(animator);
+  })();
+
+  /* ================= DEPTH (order book) ================= */
+  (function depthViz() {
+    var section = document.getElementById("depth");
+    var viz = document.getElementById("depth-viz");
+    var layer = document.getElementById("depth-layer");
+    var LEVELS = 12;
+
+    var wrap = document.createElement("div");
+    wrap.className = "depth-row";
+    var set = document.createElement("div");
+    set.className = "depth-bar-set";
+    wrap.appendChild(set);
+    layer.appendChild(wrap);
+
+    var rows = [];
+    for (var i = 0; i < LEVELS; i++) {
+      var line = document.createElement("div");
+      line.className = "depth-bar-pair";
+      var bid = document.createElement("div");
+      bid.className = "depth-bar bid";
+      var ask = document.createElement("div");
+      ask.className = "depth-bar ask";
+      line.appendChild(bid);
+      line.appendChild(ask);
+      set.appendChild(line);
+      rows.push({ bid: bid, ask: ask, depth: i });
+    }
+
+    function randomize() {
+      rows.forEach(function (r) {
+        var falloff = 1 - r.depth / (LEVELS + 2);
+        var bidW = clamp(rand(8, 100) * falloff, 3, 100);
+        var askW = clamp(rand(8, 100) * falloff, 3, 100);
+        r.bid.style.width = bidW + "%";
+        r.ask.style.width = askW + "%";
+      });
+    }
+    randomize();
+
+    var acc = 0;
+    var INTERVAL = 1800;
+    var reduceMotion = prefersReducedMotion();
+
+    var animator = {
+      visible: true,
+      update: function (dt) {
+        if (dt === 0) { randomize(); return; }
+        acc += dt;
+        if (acc >= INTERVAL) {
+          acc = 0;
+          randomize();
+        }
+        if (!reduceMotion) {
+          var rect = viz.getBoundingClientRect();
+          var vh = window.innerHeight || 800;
+          var progress = clamp(1 - (rect.top + rect.height / 2) / vh, -1, 1);
+          wrap.style.transform = "translate(-50%, calc(-50% + " + (progress * -18) + "px))";
+        }
+      }
+    };
+    watchSection(section, animator);
+    animators.push(animator);
+  })();
+
+  /* ================= HEAT DIAL (interactive, event-driven) ================= */
+  (function heatDial() {
+    var wrap = document.getElementById("dial");
+    var fill = document.getElementById("dial-fill");
+    var knob = document.getElementById("dial-knob");
+    var valueEl = document.getElementById("dial-value");
+    var stateEl = document.getElementById("heat-state");
+    var CIRC = 553;
+    var heat = 50;
+
+    var labels = [
+      [0, "凪"], [21, "静か"], [41, "平常"], [61, "熱を帯びる"], [81, "沸騰"]
+    ];
+    function labelFor(v) {
+      var out = labels[0][1];
+      labels.forEach(function (pair) { if (v >= pair[0]) out = pair[1]; });
+      return out;
+    }
+
+    function render() {
+      var t = heat / 100;
+      fill.setAttribute("stroke-dashoffset", (CIRC * (1 - t)).toFixed(1));
+      var angle = -90 + t * 360;
+      var rad = angle * Math.PI / 180;
+      knob.setAttribute("cx", (100 + 88 * Math.cos(rad)).toFixed(1));
+      knob.setAttribute("cy", (100 + 88 * Math.sin(rad)).toFixed(1));
+      valueEl.textContent = heat.toFixed(0) + "°";
+      stateEl.textContent = labelFor(heat);
+    }
+    render();
+
+    function setFromPointer(clientX, clientY) {
+      var rect = wrap.getBoundingClientRect();
+      var cx = rect.left + rect.width / 2;
+      var cy = rect.top + rect.height / 2;
+      var angle = Math.atan2(clientY - cy, clientX - cx) * 180 / Math.PI;
+      var norm = (angle + 90 + 360) % 360;
+      heat = clamp(Math.round((norm / 360) * 100), 0, 100);
+      render();
+    }
+
+    var dragging = false;
+    wrap.addEventListener("pointerdown", function (e) {
+      dragging = true;
+      wrap.setPointerCapture(e.pointerId);
+      setFromPointer(e.clientX, e.clientY);
+    });
+    wrap.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      setFromPointer(e.clientX, e.clientY);
+    });
+    wrap.addEventListener("pointerup", function () { dragging = false; });
+    wrap.addEventListener("pointercancel", function () { dragging = false; });
+  })();
+
+  /* ---------------- boot ---------------- */
+  window.addEventListener("load", function () {
+    staticPass();
+    applyMotionState();
+  });
+  applyMotionState();
+})();
+</script>
+</body>
+</html>
