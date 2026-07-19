@@ -230,6 +230,40 @@ h3, h4 {
 
 hr { border-color: var(--hairline); }
 
+/* Markdown tables (使い方 page, financial history tables, etc.) — replace the
+   browser-default grid-of-boxes look with hairline row dividers and a small
+   letter-spaced header, matching the rest of the editorial chrome. */
+[data-testid="stMarkdownContainer"] table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.4rem 0 0.6rem;
+    font-size: 0.96rem;
+}
+[data-testid="stMarkdownContainer"] table th {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-align: left;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--hairline-strong);
+    white-space: nowrap;
+}
+[data-testid="stMarkdownContainer"] table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--hairline);
+    color: var(--ink);
+    vertical-align: top;
+}
+[data-testid="stMarkdownContainer"] table tr:last-child td { border-bottom: none; }
+[data-testid="stMarkdownContainer"] table tr:hover td { background: rgba(210, 174, 92, 0.05); }
+[data-testid="stMarkdownContainer"] table td:first-child {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 /* Signal badges. Buy/sell use the semantic up/down hues; neutral uses a
    muted bronze — a desaturated relative of the accent gold rather than a
    fourth unrelated hue, so the badge trio still reads as one family. */
