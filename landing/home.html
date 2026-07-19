@@ -386,6 +386,17 @@
 <script>
 (function () {
   "use strict";
+  // Opened locally (e.g. via 起動.bat) → send "アプリを開く" to the local
+  // dev server instead of the deployed site, since that's what's actually running.
+  if (location.protocol === "file:") {
+    document.querySelectorAll('a[href="https://kabusearch.streamlit.app/"]').forEach(function (a) {
+      a.href = "http://localhost:8501";
+      a.removeAttribute("target");
+    });
+  }
+})();
+(function () {
+  "use strict";
   function rand(min, max) { return min + Math.random() * (max - min); }
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 

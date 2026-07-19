@@ -248,16 +248,16 @@ hr { border-color: var(--hairline); }
     color: var(--ink-soft);
     text-align: left;
     padding: 0.5rem 1rem;
-    border-bottom: 1px solid var(--hairline-strong);
+    border-bottom: 2px solid var(--hairline-strong);
     white-space: nowrap;
 }
 [data-testid="stMarkdownContainer"] table td {
     padding: 0.85rem 1rem;
-    border-bottom: 1px solid var(--hairline);
+    border-bottom: 1.5px solid var(--hairline);
     color: var(--ink);
     vertical-align: top;
 }
-[data-testid="stMarkdownContainer"] table tr:last-child td { border-bottom: none; }
+[data-testid="stMarkdownContainer"] table tr:last-child td { border-bottom: 2px solid var(--hairline-strong); }
 [data-testid="stMarkdownContainer"] table tr:hover td { background: rgba(210, 174, 92, 0.05); }
 [data-testid="stMarkdownContainer"] table td:first-child {
     font-weight: 600;
