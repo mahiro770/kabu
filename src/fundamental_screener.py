@@ -1,6 +1,8 @@
 import yfinance as yf
 from yfinance import EquityQuery
 
+from src.sectors import SECTOR_JA
+
 REGION_JP = "jp"
 REGION_US = "us"
 
@@ -78,3 +80,27 @@ def screen_stocks(
         print(f"スクリーニングエラー: {e}")
         return {"total": 0, "quotes": []}
     return {"total": resp.get("total", 0), "quotes": resp.get("quotes", [])}
+
+
+def get_sector_performance(region: str, sample_size: int = 10) -> list[dict]:
+    """セクターごとに時価総額上位銘柄をサンプリングし、当日の値動き
+    （regularMarketChangePercent）の単純平均をセクターの参考騰落率として返す。
+    yfinanceにセクター指数そのものは無いため、代表銘柄群の平均で近似する簡易指標。
+    戻り値は騰落率の高い順にソートした
+    [{"sector_ja": str, "avg_change_pct": float, "count": int}, ...]。"""
+    results = []
+    for sector_ja in SECTOR_JA.values():
+        quotes = screen_stocks(region=region, sector_ja=sector_ja, size=sample_size)["quotes"]
+        changes = [
+            q.get("regularMarketChangePercent") for q in quotes
+            if q.get("regularMarketChangePercent") is not None
+        ]
+        if not changes:
+            continue
+        results.append({
+            "sector_ja": sector_ja,
+            "avg_change_pct": sum(changes) / len(changes),
+            "count": len(changes),
+        })
+    results.sort(key=lambda r: r["avg_change_pct"], reverse=True)
+    return results

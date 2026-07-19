@@ -75,14 +75,16 @@ h3, h4 {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
 }
-/* Long values (e.g. "33.51兆円", "-59 (-2.04%)") wrap onto a second line
-   instead of truncating with an ellipsis — never hide the actual number.
-   The truncation styles are set on the innermost <p>, not on stMetricValue
-   or stMarkdownContainer themselves, so all three levels must be overridden. */
-[data-testid="stMetricValue"], [data-testid="stMetricDelta"],
+/* Long values/labels (e.g. "33.51兆円", "-59 (-2.04%)", "コミュニケーション・サービス")
+   wrap onto a second line instead of truncating with an ellipsis — never hide
+   the actual number or name. The truncation styles are set on the innermost
+   <p>, not on stMetricValue/stMetricLabel/stMarkdownContainer themselves, so
+   all three levels must be overridden. */
+[data-testid="stMetricValue"], [data-testid="stMetricDelta"], [data-testid="stMetricLabel"],
 [data-testid="stMetricValue"] [data-testid="stMarkdownContainer"],
 [data-testid="stMetricDelta"] [data-testid="stMarkdownContainer"],
-[data-testid="stMetricValue"] p, [data-testid="stMetricDelta"] p {
+[data-testid="stMetricLabel"] [data-testid="stMarkdownContainer"],
+[data-testid="stMetricValue"] p, [data-testid="stMetricDelta"] p, [data-testid="stMetricLabel"] p {
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: clip !important;

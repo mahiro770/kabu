@@ -1,6 +1,6 @@
 import streamlit as st
 
-from src.fundamental_screener import screen_stocks
+from src.fundamental_screener import get_sector_performance, screen_stocks
 from src.sectors import SECTOR_JA
 from src.translate import translate_names_to_ja_parallel
 from src.ui import inject_theme
@@ -8,6 +8,11 @@ from src.ui import inject_theme
 
 def _has_japanese(text: str) -> bool:
     return any('぀' <= c <= 'ヿ' or '一' <= c <= '鿿' for c in text)
+
+
+@st.cache_data(show_spinner=False, ttl=300)
+def _get_sector_performance_cached(region: str) -> list[dict]:
+    return get_sector_performance(region)
 
 st.set_page_config(
     page_title="条件スクリーニング",
@@ -25,6 +30,32 @@ st.caption(
 if "current_ticker" not in st.session_state:
     st.session_state.current_ticker = ""
 
+region_label = st.radio("市場", ["日本株", "米国株"], horizontal=True)
+region = "jp" if region_label == "日本株" else "us"
+unit = "億円" if region == "jp" else "億ドル"
+
+st.markdown("## 📊 セクター概況")
+with st.container(border=True, key="seccard_sector_overview"):
+    st.caption(
+        "各セクターの時価総額上位銘柄（最大10銘柄）の当日騰落率を平均した参考値です。"
+        "セクター指数そのものではないため、あくまで目安としてご利用ください。"
+    )
+    with st.spinner("セクター情報を取得中..."):
+        sector_perf = _get_sector_performance_cached(region)
+    if not sector_perf:
+        st.info("セクター情報を取得できませんでした。時間をおいて再度お試しください。")
+    else:
+        for row_start in range(0, len(sector_perf), 4):
+            row = sector_perf[row_start:row_start + 4]
+            cols = st.columns(4)
+            for col, s in zip(cols, row):
+                with col.container(border=True, key=f"sigcard_sector_{s['sector_ja']}"):
+                    st.metric(
+                        s["sector_ja"],
+                        f"{s['count']}銘柄",
+                        f"{s['avg_change_pct']:+.2f}%",
+                    )
+
 
 def _filter_box(label: str, key_prefix: str, step: float = 1.0, help_zero: str = "上限（0で上限なし）"):
     with st.container(border=True, key=f"sigcard_filter_{key_prefix}"):
@@ -35,11 +66,8 @@ def _filter_box(label: str, key_prefix: str, step: float = 1.0, help_zero: str =
     return min_val, max_val
 
 
+st.markdown("## 🔍 条件で絞り込む")
 with st.container(border=True, key="seccard_screen_filters"):
-    region_label = st.radio("市場", ["日本株", "米国株"], horizontal=True)
-    region = "jp" if region_label == "日本株" else "us"
-    unit = "億円" if region == "jp" else "億ドル"
-
     row1 = st.columns(3)
     with row1[0]:
         mcap_min_val, mcap_max_val = _filter_box(f"時価総額（{unit}）", "mcap", step=1.0)
