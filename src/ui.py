@@ -84,7 +84,12 @@ h3, h4 {
 [data-testid="stMetricValue"] [data-testid="stMarkdownContainer"],
 [data-testid="stMetricDelta"] [data-testid="stMarkdownContainer"],
 [data-testid="stMetricLabel"] [data-testid="stMarkdownContainer"],
-[data-testid="stMetricValue"] p, [data-testid="stMetricDelta"] p, [data-testid="stMetricLabel"] p {
+[data-testid="stMetricValue"] p, [data-testid="stMetricDelta"] p, [data-testid="stMetricLabel"] p,
+/* Deployed Streamlit builds sometimes render the label's <p> with its own
+   emotion-cache class carrying a same-specificity nowrap/ellipsis rule that
+   lands later in the stylesheet and wins the tie — repeating the attribute
+   selector below adds one extra specificity point so ours always wins. */
+[data-testid="stMetricLabel"][data-testid="stMetricLabel"] p {
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: clip !important;
