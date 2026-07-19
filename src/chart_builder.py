@@ -3,21 +3,40 @@ from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
 
+# Shared palette — mirrors the tokens in src/ui.py and landing/DESIGN.md so
+# charts, badges and the surrounding chrome all read as one system.
+_UP = "#4E9A79"       # bullish / buy
+_DOWN = "#C05B3F"      # bearish / sell
+_GOLD = "#D2AE5C"      # single accent, used for the "featured" line in a chart
+_INK = "#EDEAE0"
+_INK_SOFT = "#A6A399"
+_CLAY = "#B8834F"      # short-term reference line (MA20 / Tenkan-sen)
+_STONE = "#7C8A94"     # mid-term reference line (MA50 / Kijun-sen / MACD / OBV EMA)
+_MAUVE = "#8D7BA3"     # long-term / lagging reference line (MA200 / Chikou Span)
+_HAIRLINE = "rgba(237,234,224,0.14)"
+_HAIRLINE_STRONG = "rgba(237,234,224,0.28)"
+
+_TRANSPARENT_LAYOUT = dict(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(color=_INK_SOFT),
+)
+
 
 def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame, ja: bool = True) -> None:
     fig.add_trace(
         go.Scatter(x=df.index, y=df["ichimoku_tenkan"], name="転換線" if ja else "Tenkan-sen",
-                   line=dict(color="#ef5350", width=1)),
+                   line=dict(color=_CLAY, width=1)),
         row=1, col=1,
     )
     fig.add_trace(
         go.Scatter(x=df.index, y=df["ichimoku_kijun"], name="基準線" if ja else "Kijun-sen",
-                   line=dict(color="#1f77b4", width=1)),
+                   line=dict(color=_STONE, width=1)),
         row=1, col=1,
     )
     fig.add_trace(
         go.Scatter(x=df.index, y=df["ichimoku_chikou"], name="遅行スパン" if ja else "Chikou Span",
-                   line=dict(color="#9b59b6", width=1, dash="dot")),
+                   line=dict(color=_MAUVE, width=1, dash="dot")),
         row=1, col=1,
     )
 
@@ -32,13 +51,13 @@ def _add_ichimoku_traces(fig: go.Figure, df: pd.DataFrame, ja: bool = True) -> N
 
     fig.add_trace(
         go.Scatter(x=cloud_index, y=senkou_b, name="先行スパンB" if ja else "Senkou Span B",
-                   line=dict(color="rgba(239,83,80,0.4)", width=1)),
+                   line=dict(color="rgba(192,91,63,0.4)", width=1)),
         row=1, col=1,
     )
     fig.add_trace(
         go.Scatter(x=cloud_index, y=senkou_a, name="先行スパンA（雲）" if ja else "Senkou Span A (Cloud)",
-                   line=dict(color="rgba(38,166,154,0.4)", width=1),
-                   fill="tonexty", fillcolor="rgba(120,140,160,0.15)"),
+                   line=dict(color="rgba(78,154,121,0.4)", width=1),
+                   fill="tonexty", fillcolor="rgba(166,163,153,0.14)"),
         row=1, col=1,
     )
 
@@ -58,11 +77,11 @@ def build_watchlist_line_chart(close: pd.Series, color: str, intraday: bool = Fa
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(
             showgrid=False, tickformat=tick_fmt, nticks=5,
-            tickfont=dict(size=10, color="#9ca3af"), fixedrange=True,
+            tickfont=dict(size=10, color=_INK_SOFT), fixedrange=True,
         ),
         yaxis=dict(
-            side="right", showgrid=True, gridcolor="rgba(255,255,255,0.08)", griddash="dash",
-            tickfont=dict(size=10, color="#9ca3af"), fixedrange=True,
+            side="right", showgrid=True, gridcolor=_HAIRLINE, griddash="dash",
+            tickfont=dict(size=10, color=_INK_SOFT), fixedrange=True,
         ),
     )
     return fig
@@ -82,11 +101,11 @@ def build_sidebar_sparkline(close: pd.Series, color: str) -> go.Figure:
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(
             visible=True, showgrid=False, tickformat="%m/%d", nticks=3,
-            tickfont=dict(size=9, color="#ffffff"), fixedrange=True,
+            tickfont=dict(size=9, color=_INK), fixedrange=True,
         ),
         yaxis=dict(
-            visible=True, side="right", showgrid=True, gridcolor="rgba(255,255,255,0.08)",
-            griddash="dash", nticks=3, tickfont=dict(size=9, color="#9ca3af"), fixedrange=True,
+            visible=True, side="right", showgrid=True, gridcolor=_HAIRLINE,
+            griddash="dash", nticks=3, tickfont=dict(size=9, color=_INK_SOFT), fixedrange=True,
         ),
     )
     return fig
@@ -97,7 +116,7 @@ _PATTERN_LAYOUT = dict(
     height=180,
     showlegend=True,
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
-                font=dict(size=10, color="#9ca3af")),
+                font=dict(size=10, color=_INK_SOFT)),
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
     xaxis=dict(visible=False, fixedrange=True),
@@ -113,18 +132,18 @@ def build_pattern_example_chart(data: dict) -> go.Figure:
     if kind == "dual_line":
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=x, y=data["primary"], mode="lines", name=data["primary_name"],
-                                  line=dict(color="#8aad94", width=2)))
+                                  line=dict(color=_UP, width=2)))
         fig.add_trace(go.Scatter(x=x, y=data["secondary"], mode="lines", name=data["secondary_name"],
-                                  line=dict(color="#b7b4ac", width=1.5, dash="dot")))
+                                  line=dict(color=_INK_SOFT, width=1.5, dash="dot")))
         fig.update_layout(**_PATTERN_LAYOUT)
         return fig
 
     if kind == "oscillator":
         fig = go.Figure()
-        fig.add_hrect(y0=0, y1=data["zone_low"], fillcolor="rgba(138,173,148,0.12)", line_width=0)
-        fig.add_hrect(y0=data["zone_high"], y1=100, fillcolor="rgba(185,138,125,0.12)", line_width=0)
+        fig.add_hrect(y0=0, y1=data["zone_low"], fillcolor=_UP, opacity=0.12, line_width=0)
+        fig.add_hrect(y0=data["zone_high"], y1=100, fillcolor=_DOWN, opacity=0.12, line_width=0)
         fig.add_trace(go.Scatter(x=x, y=data["primary"], mode="lines", name=data["primary_name"],
-                                  line=dict(color="#8aad94", width=2)))
+                                  line=dict(color=_UP, width=2)))
         fig.update_layout(**_PATTERN_LAYOUT)
         fig.update_yaxes(range=[0, 100])
         return fig
@@ -134,22 +153,22 @@ def build_pattern_example_chart(data: dict) -> go.Figure:
         fig.add_trace(go.Scatter(x=x, y=data["band_upper"], mode="lines", line=dict(width=0),
                                   showlegend=False, hoverinfo="skip"))
         fig.add_trace(go.Scatter(x=x, y=data["band_lower"], mode="lines", line=dict(width=0),
-                                  fill="tonexty", fillcolor="rgba(138,173,148,0.15)",
+                                  fill="tonexty", fillcolor="rgba(78,154,121,0.15)",
                                   name=data["band_name"], hoverinfo="skip"))
         fig.add_trace(go.Scatter(x=x, y=data["primary"], mode="lines", name=data["primary_name"],
-                                  line=dict(color="#eae7e0", width=2)))
+                                  line=dict(color=_INK, width=2)))
         fig.update_layout(**_PATTERN_LAYOUT)
         return fig
 
     if kind == "adx":
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=x, y=data["adx"], mode="lines", name="ADX",
-                                  line=dict(color="#eae7e0", width=2)))
+                                  line=dict(color=_INK, width=2)))
         fig.add_trace(go.Scatter(x=x, y=data["plus_di"], mode="lines", name="+DI",
-                                  line=dict(color="#8aad94", width=1.5, dash="dot")))
+                                  line=dict(color=_UP, width=1.5, dash="dot")))
         fig.add_trace(go.Scatter(x=x, y=data["minus_di"], mode="lines", name="-DI",
-                                  line=dict(color="#b98a7d", width=1.5, dash="dot")))
-        fig.add_hline(y=25, line=dict(color="rgba(255,255,255,0.25)", width=1, dash="dash"))
+                                  line=dict(color=_DOWN, width=1.5, dash="dot")))
+        fig.add_hline(y=25, line=dict(color=_HAIRLINE_STRONG, width=1, dash="dash"))
         fig.update_layout(**_PATTERN_LAYOUT)
         return fig
 
@@ -160,8 +179,8 @@ def build_pattern_candlestick_chart(df: pd.DataFrame) -> go.Figure:
     """チャート学習ページ用の、ローソク足パターンの見た目を伝えるための簡易ローソク足図。"""
     fig = go.Figure(go.Candlestick(
         x=df.index, open=df["open"], high=df["high"], low=df["low"], close=df["close"],
-        increasing_line_color="#8aad94", decreasing_line_color="#b98a7d",
-        increasing_fillcolor="#8aad94", decreasing_fillcolor="#b98a7d",
+        increasing_line_color=_UP, decreasing_line_color=_DOWN,
+        increasing_fillcolor=_UP, decreasing_fillcolor=_DOWN,
     ))
     fig.update_layout(
         margin=dict(l=8, r=8, t=8, b=8),
@@ -191,16 +210,16 @@ def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list, ja: bool = T
             low=df["low"],
             close=df["close"],
             name=ticker,
-            increasing_line_color="#26a69a",
-            decreasing_line_color="#ef5350",
+            increasing_line_color=_UP,
+            decreasing_line_color=_DOWN,
         ),
         row=1, col=1,
     )
 
     ma_styles = {
-        "MA20": ("#1f77b4", "MA20"),
-        "MA50": ("#ff7f0e", "MA50"),
-        "MA200": ("#2ca02c", "MA200"),
+        "MA20": (_CLAY, "MA20"),
+        "MA50": (_STONE, "MA50"),
+        "MA200": (_MAUVE, "MA200"),
     }
     for key, (color, label) in ma_styles.items():
         if key in show_ma:
@@ -214,20 +233,20 @@ def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list, ja: bool = T
     if "BB" in show_ma:
         fig.add_trace(
             go.Scatter(x=df.index, y=df["bb_upper"], name="BB上限" if ja else "BB Upper",
-                       line=dict(color="rgba(180,180,180,0.6)", width=1, dash="dash")),
+                       line=dict(color="rgba(166,163,153,0.55)", width=1, dash="dash")),
             row=1, col=1,
         )
         fig.add_trace(
             go.Scatter(x=df.index, y=df["bb_lower"], name="BB下限" if ja else "BB Lower",
-                       line=dict(color="rgba(180,180,180,0.6)", width=1, dash="dash"),
-                       fill="tonexty", fillcolor="rgba(150,150,150,0.08)"),
+                       line=dict(color="rgba(166,163,153,0.55)", width=1, dash="dash"),
+                       fill="tonexty", fillcolor="rgba(166,163,153,0.08)"),
             row=1, col=1,
         )
 
     if "VWAP" in show_ma:
         fig.add_trace(
             go.Scatter(x=df.index, y=df["vwap"], name="VWAP(20)",
-                       line=dict(color="#e91e8c", width=1.5, dash="dot")),
+                       line=dict(color=_GOLD, width=1.5, dash="dot")),
             row=1, col=1,
         )
 
@@ -235,7 +254,7 @@ def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list, ja: bool = T
         _add_ichimoku_traces(fig, df, ja)
 
     vol_colors = [
-        "#26a69a" if c >= o else "#ef5350"
+        _UP if c >= o else _DOWN
         for c, o in zip(df["close"], df["open"])
     ]
     fig.add_trace(
@@ -251,6 +270,7 @@ def build_price_chart(df: pd.DataFrame, ticker: str, show_ma: list, ja: bool = T
         template="plotly_dark",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         margin=dict(t=60, b=20),
+        **_TRANSPARENT_LAYOUT,
     )
     fig.update_yaxes(title_text="価格" if ja else "Price", row=1, col=1)
     fig.update_yaxes(title_text="出来高" if ja else "Volume", row=2, col=1)
@@ -264,18 +284,18 @@ def build_rsi_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
     fig.add_trace(go.Scatter(
         x=df.index, y=df["rsi"],
         name="RSI(14)",
-        line=dict(color="#9b59b6", width=2),
+        line=dict(color=_GOLD, width=2),
     ))
 
-    fig.add_hrect(y0=70, y1=100, fillcolor="red", opacity=0.05, line_width=0)
-    fig.add_hrect(y0=0, y1=30, fillcolor="green", opacity=0.05, line_width=0)
-    fig.add_hline(y=70, line_dash="dash", line_color="rgba(255,80,80,0.6)",
+    fig.add_hrect(y0=70, y1=100, fillcolor=_DOWN, opacity=0.08, line_width=0)
+    fig.add_hrect(y0=0, y1=30, fillcolor=_UP, opacity=0.08, line_width=0)
+    fig.add_hline(y=70, line_dash="dash", line_color="rgba(192,91,63,0.6)",
                   annotation_text="売られすぎ 70" if ja else "Overbought 70",
                   annotation_position="right")
-    fig.add_hline(y=30, line_dash="dash", line_color="rgba(80,200,80,0.6)",
+    fig.add_hline(y=30, line_dash="dash", line_color="rgba(78,154,121,0.6)",
                   annotation_text="買われすぎ 30" if ja else "Oversold 30",
                   annotation_position="right")
-    fig.add_hline(y=50, line_dash="dot", line_color="rgba(150,150,150,0.4)")
+    fig.add_hline(y=50, line_dash="dot", line_color="rgba(166,163,153,0.4)")
 
     fig.update_layout(
         title="RSI（相対力指数）" if ja else "RSI (Relative Strength Index)",
@@ -284,13 +304,14 @@ def build_rsi_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
         yaxis=dict(range=[0, 100]),
         margin=dict(t=40, b=20),
         showlegend=False,
+        **_TRANSPARENT_LAYOUT,
     )
     return fig
 
 
 def build_macd_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
     hist_colors = [
-        "#26a69a" if v >= 0 else "#ef5350"
+        _UP if v >= 0 else _DOWN
         for v in df["macd_hist"].fillna(0)
     ]
 
@@ -305,15 +326,15 @@ def build_macd_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
     fig.add_trace(go.Scatter(
         x=df.index, y=df["macd"],
         name="MACD",
-        line=dict(color="#1f77b4", width=1.5),
+        line=dict(color=_STONE, width=1.5),
     ))
     fig.add_trace(go.Scatter(
         x=df.index, y=df["macd_signal"],
         name="シグナル" if ja else "Signal",
-        line=dict(color="#ff7f0e", width=1.5),
+        line=dict(color=_GOLD, width=1.5),
     ))
 
-    fig.add_hline(y=0, line_dash="dash", line_color="rgba(150,150,150,0.4)")
+    fig.add_hline(y=0, line_dash="dash", line_color="rgba(166,163,153,0.4)")
 
     fig.update_layout(
         title="MACD",
@@ -321,6 +342,7 @@ def build_macd_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
         template="plotly_dark",
         margin=dict(t=40, b=20),
         legend=dict(orientation="h"),
+        **_TRANSPARENT_LAYOUT,
     )
     return fig
 
@@ -330,18 +352,18 @@ def build_adx_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
 
     fig.add_trace(go.Scatter(
         x=df.index, y=df["adx"], name="ADX",
-        line=dict(color="#f3f4f6", width=2),
+        line=dict(color=_INK, width=2),
     ))
     fig.add_trace(go.Scatter(
         x=df.index, y=df["plus_di"], name="+DI",
-        line=dict(color="#26a69a", width=1.5),
+        line=dict(color=_UP, width=1.5),
     ))
     fig.add_trace(go.Scatter(
         x=df.index, y=df["minus_di"], name="-DI",
-        line=dict(color="#ef5350", width=1.5),
+        line=dict(color=_DOWN, width=1.5),
     ))
 
-    fig.add_hline(y=25, line_dash="dash", line_color="rgba(150,150,150,0.5)",
+    fig.add_hline(y=25, line_dash="dash", line_color="rgba(166,163,153,0.5)",
                   annotation_text="トレンドあり 25" if ja else "Trending 25",
                   annotation_position="right")
 
@@ -351,6 +373,7 @@ def build_adx_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
         template="plotly_dark",
         margin=dict(t=40, b=20),
         legend=dict(orientation="h"),
+        **_TRANSPARENT_LAYOUT,
     )
     return fig
 
@@ -360,11 +383,11 @@ def build_obv_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
 
     fig.add_trace(go.Scatter(
         x=df.index, y=df["obv"], name="OBV",
-        line=dict(color="#8b5cf6", width=1.5),
+        line=dict(color=_GOLD, width=1.5),
     ))
     fig.add_trace(go.Scatter(
         x=df.index, y=df["obv_ema"], name="OBV EMA20",
-        line=dict(color="#22d3ee", width=1.5, dash="dot"),
+        line=dict(color=_STONE, width=1.5, dash="dot"),
     ))
 
     fig.update_layout(
@@ -373,6 +396,7 @@ def build_obv_chart(df: pd.DataFrame, ja: bool = True) -> go.Figure:
         template="plotly_dark",
         margin=dict(t=40, b=20),
         legend=dict(orientation="h"),
+        **_TRANSPARENT_LAYOUT,
     )
     return fig
 
@@ -403,14 +427,14 @@ def build_comparison_chart(
     fig.add_trace(go.Scatter(
         x=df_trim.index, y=stock_norm,
         name=f"{ticker} ({stock_ret:+.1f}%)",
-        line=dict(color="#1f77b4", width=2),
+        line=dict(color=_GOLD, width=2),
     ))
     fig.add_trace(go.Scatter(
         x=idx_trim.index, y=idx_norm,
         name=f"{idx_name} ({idx_ret:+.1f}%)",
-        line=dict(color="#ff7f0e", width=2),
+        line=dict(color=_STONE, width=2),
     ))
-    fig.add_hline(y=100, line_dash="dash", line_color="rgba(180,180,180,0.4)")
+    fig.add_hline(y=100, line_dash="dash", line_color="rgba(166,163,153,0.4)")
 
     sign = "+" if alpha >= 0 else ""
     title = (
@@ -424,5 +448,6 @@ def build_comparison_chart(
         yaxis_title="相対パフォーマンス" if ja else "Relative Performance",
         margin=dict(t=50, b=20),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        **_TRANSPARENT_LAYOUT,
     )
     return fig

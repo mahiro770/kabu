@@ -4,20 +4,34 @@ _CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
+:root {
+    --paper: #121212;
+    --paper-soft: #1B1B19;
+    --paper-soft-2: #232320;
+    --ink: #EDEAE0;
+    --ink-soft: #A6A399;
+    --up: #4E9A79;
+    --down: #C05B3F;
+    --gold: #D2AE5C;
+    --hairline: rgba(237, 234, 224, 0.14);
+    --hairline-strong: rgba(237, 234, 224, 0.28);
+    --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Consolas, monospace;
+}
+
 html, body, [class*="css"] {
     font-family: 'Noto Sans JP', sans-serif;
 }
 
 .stApp {
-    background: #1b1e21;
+    background: var(--paper);
 }
 
 .block-container { padding-top: 2.2rem; padding-bottom: 3rem; }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
-    background: #17191c;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: #0e0e0c;
+    border-right: 1px solid var(--hairline);
 }
 
 /* Headings — mincho serif for a calmer, more grown-up tone.
@@ -29,30 +43,38 @@ h1 {
     font-weight: 600 !important;
     font-size: 2.3rem !important;
     letter-spacing: 0.01em;
-    color: #eae7e0 !important;
+    color: var(--ink) !important;
 }
 h3, h4 {
     font-family: 'Shippori Mincho', serif !important;
     font-weight: 600 !important;
-    color: #eae7e0 !important;
+    color: var(--ink) !important;
     margin-top: 0.4rem;
     margin-bottom: 1rem;
 }
 
 /* Metric cards */
 [data-testid="stMetric"] {
-    background: #212529;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--paper-soft);
+    border: 1px solid var(--hairline);
     border-radius: 12px;
     padding: 1rem 1.1rem;
     transition: border-color 0.15s ease, transform 0.15s ease;
 }
 [data-testid="stMetric"]:hover {
     transform: translateY(-1px);
-    border-color: rgba(138, 173, 148, 0.45);
+    border-color: rgba(210, 174, 92, 0.45);
 }
-[data-testid="stMetricLabel"] { color: #97958d; }
-[data-testid="stMetricValue"] { color: #eae7e0; }
+[data-testid="stMetricLabel"] { color: var(--ink-soft); }
+[data-testid="stMetricValue"] {
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+[data-testid="stMetricDelta"] {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
 /* Long values (e.g. "33.51兆円", "-59 (-2.04%)") wrap onto a second line
    instead of truncating with an ellipsis — never hide the actual number.
    The truncation styles are set on the innermost <p>, not on stMetricValue
@@ -74,8 +96,8 @@ h3, h4 {
    and that fresh rule can land later in the stylesheet than ours, winning
    the cascade at equal specificity — same root cause as the h1 override above. */
 [data-testid="stBaseButton-primary"] {
-    background: #3a4a3d !important;
-    border: 1px solid rgba(138, 173, 148, 0.4) !important;
+    background: #3a3221 !important;
+    border: 1px solid rgba(210, 174, 92, 0.4) !important;
     border-radius: 10px;
     padding: 0.6rem 1.5rem;
     font-size: 1.02rem;
@@ -83,7 +105,7 @@ h3, h4 {
     transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 [data-testid="stBaseButton-primary"]:hover {
-    box-shadow: 0 0 0 3px rgba(138, 173, 148, 0.18);
+    box-shadow: 0 0 0 3px rgba(210, 174, 92, 0.18);
     transform: translateY(-1px);
 }
 
@@ -94,8 +116,8 @@ h3, h4 {
     transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 [data-testid="stBaseButton-secondary"]:hover {
-    border-color: rgba(138, 173, 148, 0.5);
-    box-shadow: 0 0 0 3px rgba(138, 173, 148, 0.12);
+    border-color: rgba(210, 174, 92, 0.5);
+    box-shadow: 0 0 0 3px rgba(210, 174, 92, 0.12);
     transform: translateY(-1px);
 }
 
@@ -105,21 +127,21 @@ h3, h4 {
     transition: color 0.15s ease, border-color 0.15s ease;
 }
 [data-testid="stTabs"] button[aria-selected="true"] {
-    color: #8aad94 !important;
-    border-bottom-color: #8aad94 !important;
+    color: var(--gold) !important;
+    border-bottom-color: var(--gold) !important;
 }
 [data-testid="stTabs"] button[aria-selected="false"]:hover {
-    color: #b7b4ac !important;
+    color: var(--ink-soft) !important;
 }
 
 /* Expander */
 [data-testid="stExpander"] {
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--hairline);
     border-radius: 10px;
     transition: border-color 0.15s ease;
 }
 [data-testid="stExpander"]:hover {
-    border-color: rgba(138, 173, 148, 0.35);
+    border-color: rgba(210, 174, 92, 0.35);
 }
 
 /* Bordered containers used as cards (e.g. watchlist rows).
@@ -128,12 +150,12 @@ h3, h4 {
 [class*="st-key-wlcard_"] {
     border-radius: 12px !important;
     margin-bottom: 0.9rem;
-    background: #212529 !important;
+    background: var(--paper-soft) !important;
     transition: border-color 0.15s ease, transform 0.15s ease;
 }
 [class*="st-key-wlcard_"]:hover {
     transform: translateY(-1px);
-    border-color: rgba(138, 173, 148, 0.4) !important;
+    border-color: rgba(210, 174, 92, 0.4) !important;
 }
 
 /* Static section cards — used to group related content (financial metric
@@ -143,8 +165,8 @@ h3, h4 {
     border-radius: 14px !important;
     padding: 1.3rem 1.5rem !important;
     margin-bottom: 1.6rem;
-    background: #212529 !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: var(--paper-soft) !important;
+    border-color: var(--hairline) !important;
 }
 
 /* Small per-indicator cards (technical signal grid). Same visual language
@@ -153,12 +175,12 @@ h3, h4 {
     border-radius: 12px !important;
     padding: 0.8rem 0.9rem !important;
     margin: 0 0.6rem 0.9rem 0 !important;
-    background: #212529 !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: var(--paper-soft) !important;
+    border-color: var(--hairline) !important;
     transition: border-color 0.15s ease;
 }
 [class*="st-key-sigcard_"]:hover {
-    border-color: rgba(138, 173, 148, 0.35) !important;
+    border-color: rgba(210, 174, 92, 0.35) !important;
 }
 
 /* Radio groups styled as pill chips (period / folder selectors).
@@ -167,8 +189,8 @@ h3, h4 {
    testid in newer ones) — both selectors are kept so this works either way. */
 [data-testid="stRadio"] label[data-baseweb="radio"],
 [data-testid="stRadioOption"] {
-    background: rgba(138, 173, 148, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(210, 174, 92, 0.05);
+    border: 1px solid var(--hairline);
     border-radius: 999px;
     padding: 0.25rem 0.9rem;
     margin-right: 0.3rem;
@@ -176,14 +198,14 @@ h3, h4 {
 }
 [data-testid="stRadio"] label[data-baseweb="radio"]:hover,
 [data-testid="stRadioOption"]:hover {
-    background: rgba(138, 173, 148, 0.12);
-    border-color: rgba(138, 173, 148, 0.5);
+    background: rgba(210, 174, 92, 0.12);
+    border-color: rgba(210, 174, 92, 0.5);
     transform: translateY(-1px);
 }
 [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked),
 [data-testid="stRadioOption"][data-selected="true"] {
-    background: rgba(138, 173, 148, 0.2);
-    border-color: rgba(138, 173, 148, 0.55);
+    background: rgba(210, 174, 92, 0.2);
+    border-color: rgba(210, 174, 92, 0.55);
 }
 
 /* Text inputs / text areas */
@@ -191,39 +213,42 @@ h3, h4 {
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 [data-testid="stTextInput"] input:focus, [data-testid="stTextArea"] textarea:focus {
-    border-color: rgba(138, 173, 148, 0.55) !important;
-    box-shadow: 0 0 0 1px rgba(138, 173, 148, 0.28);
+    border-color: rgba(210, 174, 92, 0.55) !important;
+    box-shadow: 0 0 0 1px rgba(210, 174, 92, 0.28);
 }
 
 /* Number inputs (e.g. screening filter min/max fields) */
 [data-testid="stNumberInputContainer"] {
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border: 1px solid var(--hairline-strong) !important;
     border-radius: 10px !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 [data-testid="stNumberInputContainer"]:focus-within {
-    border-color: rgba(138, 173, 148, 0.55) !important;
-    box-shadow: 0 0 0 1px rgba(138, 173, 148, 0.28);
+    border-color: rgba(210, 174, 92, 0.55) !important;
+    box-shadow: 0 0 0 1px rgba(210, 174, 92, 0.28);
 }
 
-hr { border-color: rgba(255, 255, 255, 0.08); }
+hr { border-color: var(--hairline); }
 
-/* Signal badges */
+/* Signal badges. Buy/sell use the semantic up/down hues; neutral uses a
+   muted bronze — a desaturated relative of the accent gold rather than a
+   fourth unrelated hue, so the badge trio still reads as one family. */
 .signal-buy, .signal-sell, .signal-neutral {
     display: inline-block;
     padding: 0.15rem 0.7rem;
     border-radius: 999px;
     font-weight: 700;
     font-size: 0.95rem;
+    font-family: var(--font-mono);
 }
-.signal-buy { color: #8aad94; background: rgba(138, 173, 148, 0.12); }
-.signal-sell { color: #b98a7d; background: rgba(185, 138, 125, 0.12); }
-.signal-neutral { color: #c2a873; background: rgba(194, 168, 115, 0.12); }
+.signal-buy { color: var(--up); background: rgba(78, 154, 121, 0.14); }
+.signal-sell { color: var(--down); background: rgba(192, 91, 63, 0.14); }
+.signal-neutral { color: #B79A5C; background: rgba(183, 154, 92, 0.14); }
 
-.fin-label { font-size: 0.8rem; color: #97958d; }
+.fin-label { font-size: 0.8rem; color: var(--ink-soft); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: rgba(138, 173, 148, 0.35); border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(210, 174, 92, 0.35); border-radius: 8px; }
 </style>
 """
 

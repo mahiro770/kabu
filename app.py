@@ -245,7 +245,7 @@ def _render_watchlist(wl: list, save_fn, key_prefix: str, show_added_by: bool, u
             quote = _get_sidebar_quote(wt["ticker"])
             if quote is not None:
                 currency = "JPY" if wt["ticker"].endswith(".T") else "USD"
-                color = "#7fb69c" if quote["change"] >= 0 else "#c98f89"
+                color = "#4E9A79" if quote["change"] >= 0 else "#C05B3F"
                 st.markdown(
                     f"<div style='font-size:0.8rem; line-height:1.4;'>"
                     f"{quote['current']:,.0f} {currency} "
